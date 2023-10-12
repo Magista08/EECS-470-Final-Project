@@ -56,13 +56,14 @@ files in the `verilog/` folder, and write testbenches for them in the
 module named `rob`.
 
 Once you have something written, try running the new Makefile targets.
-For the same rob, run `make rob.pass` to compile, run, and check the
-testbench. Do the same for synthesis with `make rob.syn`. And finally,
-check your testbench's coverage with `make rob.coverage.`
+Add `rob` to the TESTED_MODULES variable in the Maekefile, then run
+`make rob.pass` to compile, run, and check the testbench. Do the same
+for synthesis with `make rob.syn.pass`. And finally, check your
+testbench's coverage with `make rob.coverage.`
 
 After you have the first module written and tested, keep going and work
-towards a full processor. Try to pass the `mult_no_lsq` program for the
-second milestone.
+towards a full processor. Plan to pass the `mult_no_lsq` program for the
+second milestone (verify with the .wb file).
 
 ## Changes from Project 3
 
@@ -86,8 +87,8 @@ synthesis, and print the output of coverage for the module.
 
 ``` make
 # ---- Module Testbenches ---- #
-NOTE: these require files like: 'verilog/rob.sv' and 'test/rob_test.sv'
-      which implement and test the module: 'rob'
+# NOTE: these require files like: 'verilog/rob.sv' and 'test/rob_test.sv'
+#       which implement and test the module: 'rob'
 make <module>.pass   <- greps for "@@@ Passed" or "@@@ Incorrect" in the output
 make <module>.out    <- run the testbench (via <module>.simv)
 make <module>.simv   <- compile the testbench executable
@@ -129,8 +130,8 @@ modules into a full processor again.
 
 ## New Files
 
-We've added an example `icache` module. The `verilog/icache.sv` file
-has more comments explaining how it works, but the idea is it stores
+We've added an `icache` module in `verilog/icache.sv`. That file has
+more comments explaining how it works, but the idea is it stores
 memory's response tag until memory returns that tag with the data. More
 about how our processor's memory works will be presented in the final
 lab section.
@@ -149,15 +150,15 @@ your processor's clock period.
 
 ### `verilog/p3` and the `decoder.sv`
 
-The project 3 files are no longer as relevant to your final processor,
-but they are still good references, so project 3's starter verilog
-source files have been moved to `verilog/p3/`. Notably, the decoder
-has been pulled out as a new file `verilog/decoder.sv`.
+The project 3 files are no longer relevant to your final processor, but
+they are still good references, so project 3's starter verilog source
+files have been moved to `verilog/p3/`. Notably, the decoder has been
+pulled out as a new file `verilog/decoder.sv`.
 
 ## P3 Makefile Target Reference
 
 This is the Makefile target reference from project 3, I've left it here
-for reference.
+for reference. Most of the P3 portion of the Makefile is unchanged.
 
 To run a program on the processor, run `make <my_program>.out`. This
 will assemble a RISC-V `*.mem` file which will be loaded into `mem.sv`
