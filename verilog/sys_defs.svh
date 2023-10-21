@@ -24,9 +24,9 @@
 `define N 1
 
 // sizes
-`define ROB_SZ xx
-`define RS_SZ xx
-`define PHYS_REG_SZ (32 + `ROB_SZ)
+`define ROBLEN xx
+`define RSLEN xx
+//`define PHYS_REG_SZ (32 + `ROB_SZ)
 
 // worry about these later
 `define BRANCH_PRED_SZ xx
@@ -82,7 +82,7 @@
 
 // How many memory requests can be waiting at once
 `define NUM_MEM_TAGS 15
-
+//modify is_buffer
 `define MEM_SIZE_IN_BYTES (64*1024)
 `define MEM_64BIT_LINES   (`MEM_SIZE_IN_BYTES/8)
 
@@ -312,7 +312,7 @@ typedef struct packed {
     logic       csr_op;        // Is this a CSR operation? (we use this to get return code)
 
     logic       valid;
-} ID_EX_PACKET;
+} DP_PACKET;
 
 /**
  * EX_MEM Packet:
@@ -320,7 +320,7 @@ typedef struct packed {
  */
 typedef struct packed {
     logic [`XLEN-1:0] alu_result;
-    logic [`XLEN-1:0] NPC;
+    logic [`XLEN-1:0] NPC;//modify is_buffer
 
     logic             take_branch; // Is this a taken branch?
     // Pass-through from decode stage
@@ -345,7 +345,7 @@ typedef struct packed {
 typedef struct packed {
     logic [`XLEN-1:0] result;
     logic [`XLEN-1:0] NPC;
-    logic [4:0]       dest_reg_idx; // writeback destination (ZERO_REG if no writeback)
+    logic [4:0]       dest_reg_idx; // writeback destination//modify is_buffer (ZERO_REG if no writeback)
     logic             take_branch;
     logic             halt;    // not used by wb stage
     logic             illegal; // not used by wb stage
@@ -356,4 +356,57 @@ typedef struct packed {
  * No WB output packet as it would be more cumbersome than useful
  */
 
+
+typedef struct packed {
+    logic [$clog2(`RSLEN)-1:0]		RSID;
+    INST              			inst;
+    logic 				busy;
+    logic				ready;
+    //logic [$clog2(`ROBLEN)-1:0]			insn//modify is_buffer_id;//ROBID
+    logic [$clog2(`ROBLEN)-1:0]			T;//ROBID
+    logic [$clog2(`ROBLEN)-1:0]       		T1;//ROBID    
+    logic [$clog2(`ROBLEN)-1:0]         	T2;//ROBID
+    logic [`XLEN-1:0]           	V1;
+    logic [`XLEN-1:0]			V2;
+    logic 				halt;
+
+
+} RS_LINE;
+
+typedef struct packed {
+    logic [2:0] [`XLEN-1:0]           	V1;
+    logic [2:0] [`XLEN-1:0]		V2;
+    logic [2:0] [$clog2(`ROBLEN)-1:0]       	T1;//ROBID    
+    logic [2:0] [$clog2(`ROBLEN)-1:0]         	T2;//ROBID
+    logic [2:0]					valid1;
+    logic [2:0]					valid2;
+} ROB_RS_PACKET;//
+
+typedef struct packed {
+    logic [2:0] [`XLEN-1:0]           	value;//modify is_buffer
+    logic [2:0] [$clog2(`ROBLEN)-1:0]       	tag;//CDBID
+    logic [2:0]					valid;
+} CDB_RS_PACKET;
+
+typedef struct packed {
+    logic [2:0] [$clog2(`ROBLEN)-1:0]       	T;//ROBID
+    logic [2:0]					valid;  
+} MT_RS_PACKET;//
+
+typedef struct packed {
+    DP_PACKET [2:0] 			packet;
+} DP_RS_PACKET;
+
+typedef struct packed {
+    logic [2:0] 			excuted;
+} IS_RS_PACKET;
+
+typedef struct packed {
+    RS_LINE [2:0] 			line;
+} RS_IS_PACKET;
+
+typedef struct packed {
+    logic [2:0]				inserted;//to DP
+    logic [1:0]				empty_num;//to DP
+} RS_DP_PACKET;
 `endif // __SYS_DEFS_SVH__
