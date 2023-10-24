@@ -383,6 +383,14 @@ typedef struct packed {
     logic full;
 } RS_TABLE;
 
+typedef struct packed {
+    logic [2:0] [$clog2(`ROBLEN)-1:0]  Tag;
+
+    INST inst;
+    logic [4:0]       R;
+    logic [`XLEN-1:0] V;
+} ROB_LINE;
+
 typedef struct packed{
     ROB_LINE [ROBLEN-1:0] rob_line;
     /*
@@ -392,16 +400,13 @@ typedef struct packed{
 } ROB_TABLE;
 
 typedef struct packed {
-    /*
-    logic head, tail;
-     */
     logic [2:0] [`XLEN-1:0]            V1;
     logic [2:0] [`XLEN-1:0]		       V2;
     logic [2:0] [$clog2(`ROBLEN)-1:0]  T1;//ROBID    
     logic [2:0] [$clog2(`ROBLEN)-1:0]  T2;//ROBID
     logic [2:0]					       valid1;
     logic [2:0]					       valid2;
-} ROB_LINE;//
+} ROB_RS_PACKET;//
 
 typedef struct packed {
     logic [2:0] [`XLEN-1:0]           	value;//modify is_buffer
@@ -422,7 +427,9 @@ typedef struct packed {
     logic [2:0] 			excuted;
 } IS_RS_PACKET;
 
-
+typedef struct packed {
+    RS_LINE [2:0] lines;
+} RS_IS_PACKET;
 
 typedef struct packed {
     logic [2:0]				inserted;//to DP
