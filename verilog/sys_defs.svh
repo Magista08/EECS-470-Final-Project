@@ -356,7 +356,10 @@ typedef struct packed {
  * No WB output packet as it would be more cumbersome than useful
  */
 
-
+/** 
+ * RS Table 
+ * Record the status of ROB and ready to transfer the inst into the issue
+ */
 typedef struct packed {
     logic [$clog2(`RSLEN)-1:0]		RSID;
 
@@ -372,19 +375,33 @@ typedef struct packed {
     logic [`XLEN-1:0]			V2;
 
     logic halt;
-    logic ready;
-
-
+    logic ready; // 0: not ready 1: ready
 } RS_LINE;
 
 typedef struct packed {
+    RS_LINE [`RSLEN-1:0] 			line;
+    logic full;
+} RS_TABLE;
+
+typedef struct packed{
+    ROB_LINE [ROBLEN-1:0] rob_line;
+    /*
+    logic [$clog2(`ROBLEN)-1:0] head;
+    loigc [$clog2(`ROBLEN)-1:0] tail;
+    */
+} ROB_TABLE;
+
+typedef struct packed {
+    /*
+    logic head, tail;
+     */
     logic [2:0] [`XLEN-1:0]            V1;
     logic [2:0] [`XLEN-1:0]		       V2;
     logic [2:0] [$clog2(`ROBLEN)-1:0]  T1;//ROBID    
     logic [2:0] [$clog2(`ROBLEN)-1:0]  T2;//ROBID
-    logic [2:0]					valid1;
-    logic [2:0]					valid2;
-} ROB_RS_PACKET;//
+    logic [2:0]					       valid1;
+    logic [2:0]					       valid2;
+} ROB_LINE;//
 
 typedef struct packed {
     logic [2:0] [`XLEN-1:0]           	value;//modify is_buffer
@@ -405,12 +422,11 @@ typedef struct packed {
     logic [2:0] 			excuted;
 } IS_RS_PACKET;
 
-typedef struct packed {
-    RS_LINE [2:0] 			line;
-} RS_IS_PACKET;
+
 
 typedef struct packed {
     logic [2:0]				inserted;//to DP
     logic [1:0]				empty_num;//to DP
 } RS_DP_PACKET;
+
 `endif // __SYS_DEFS_SVH__
