@@ -29,23 +29,23 @@ module RS (
                 .clock(clock),
                 .reset(reset),
                 .enable(enable),
-		.empty(empty[n]);
-		.squash_flag(squash_flag),
-		.line_id(n),
-		.sel(sel_buffer[n]),
-    		.dp_packet(dp_packet),
-    		.mt_packet(mt_packet),
-    		.rob_packet(rob_packet),
-    		.cdb_packet(cdb_packet),
-		//output
-    		.rs_line(rs_line[n])
+                .empty(empty[n]);
+                .squash_flag(squash_flag),
+                .line_id(n),
+                .sel(sel_buffer[n]),
+                .dp_packet(dp_packet),
+                .mt_packet(mt_packet),
+                .rob_packet(rob_packet),
+                .cdb_packet(cdb_packet),
+            //output
+                .rs_line(rs_line[n])
             );
 	    
         end
     endgenerate
 
     //whether full
-
+    
     //go through all the lines. if a line is ready, insert into is_packet_out, the max length of is_packet_out is 3
 
 	//empty

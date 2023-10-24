@@ -359,25 +359,29 @@ typedef struct packed {
 
 typedef struct packed {
     logic [$clog2(`RSLEN)-1:0]		RSID;
-    INST              			inst;
-    logic 				busy;
-    logic				ready;
+
+    INST  inst;
+    logic busy;
+    
     //logic [$clog2(`ROBLEN)-1:0]			insn//modify is_buffer_id;//ROBID
-    logic [$clog2(`ROBLEN)-1:0]			T;//ROBID
-    logic [$clog2(`ROBLEN)-1:0]       		T1;//ROBID    
-    logic [$clog2(`ROBLEN)-1:0]         	T2;//ROBID
-    logic [`XLEN-1:0]           	V1;
+    logic [$clog2(`ROBLEN)-1:0]	T;//ROBID
+    logic [$clog2(`ROBLEN)-1:0] T1;//ROBID    
+    logic [$clog2(`ROBLEN)-1:0] T2;//ROBID
+
+    logic [`XLEN-1:0]           V1;
     logic [`XLEN-1:0]			V2;
-    logic 				halt;
+
+    logic halt;
+    logic ready;
 
 
 } RS_LINE;
 
 typedef struct packed {
-    logic [2:0] [`XLEN-1:0]           	V1;
-    logic [2:0] [`XLEN-1:0]		V2;
-    logic [2:0] [$clog2(`ROBLEN)-1:0]       	T1;//ROBID    
-    logic [2:0] [$clog2(`ROBLEN)-1:0]         	T2;//ROBID
+    logic [2:0] [`XLEN-1:0]            V1;
+    logic [2:0] [`XLEN-1:0]		       V2;
+    logic [2:0] [$clog2(`ROBLEN)-1:0]  T1;//ROBID    
+    logic [2:0] [$clog2(`ROBLEN)-1:0]  T2;//ROBID
     logic [2:0]					valid1;
     logic [2:0]					valid2;
 } ROB_RS_PACKET;//
