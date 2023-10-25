@@ -312,7 +312,7 @@ typedef struct packed {
     logic       csr_op;        // Is this a CSR operation? (we use this to get return code)
 
     logic       valid;
-} DP_PACKET;
+} DP_IS_PACKET;
 
 /**
  * EX_MEM Packet:
@@ -361,13 +361,13 @@ typedef struct packed {
  * Record the status of ROB and ready to transfer the inst into the issue
  */
 typedef struct packed {
+    // Characteristics for RS
     logic [$clog2(`RSLEN)-1:0]		RSID;
 
     INST  inst;
     logic busy;
     
-    //logic [$clog2(`ROBLEN)-1:0]			insn//modify is_buffer_id;//ROBID
-    logic [$clog2(`ROBLEN)-1:0]	T;//ROBID
+    logic [$clog2(`ROBLEN)-1:0]	T; //ROBID
     logic [$clog2(`ROBLEN)-1:0] T1;//ROBID    
     logic [$clog2(`ROBLEN)-1:0] T2;//ROBID
 
@@ -376,6 +376,26 @@ typedef struct packed {
 
     logic halt;
     logic ready; // 0: not ready 1: ready
+
+    // Characteristics for instr
+    /* This is mainly for the EX_PACKET */ 
+    logic [`XLEN-1:0] PC;
+    logic [`XLEN-1:0] NPC; // PC + 4
+
+    ALU_OPA_SELECT opa_select; // ALU opa mux select (ALU_OPA_xxx *)
+    ALU_OPB_SELECT opb_select; // ALU opb mux select (ALU_OPB_xxx *)
+
+    logic [4:0] dest_reg_idx;  // destination (writeback) register index
+    ALU_FUNC    alu_func;      // ALU function select (ALU_xxx *)
+    logic       rd_mem;        // Does inst read memory?
+    logic       wr_mem;        // Does inst write memory?
+    logic       cond_branch;   // Is inst a conditional branch?
+    logic       uncond_branch; // Is inst an unconditional branch?
+    logic       halt;          // Is this a halt?
+    logic       illegal;       // Is this instruction illegal?
+    logic       csr_op;        // Is this a CSR operation? (we only used this as a cheap way to get return code)
+
+    logic       valid;
 } RS_LINE;
 
 typedef struct packed {
@@ -383,21 +403,50 @@ typedef struct packed {
     logic full;
 } RS_TABLE;
 
+/** 
+ * ROB Table 
+ * Record the instruction that is already decoded
+ */
+
 typedef struct packed {
     logic [2:0] [$clog2(`ROBLEN)-1:0]  Tag;
 
-    INST inst;
+    INST              inst;
     logic [4:0]       R;
     logic [`XLEN-1:0] V;
+
 } ROB_LINE;
 
 typedef struct packed{
-    ROB_LINE [ROBLEN-1:0] rob_line;
+    ROB_LINE [ROBLEN-1:0] line;
     /*
     logic [$clog2(`ROBLEN)-1:0] head;
     loigc [$clog2(`ROBLEN)-1:0] tail;
     */
 } ROB_TABLE;
+
+/*
+ * MapTable
+ * Record the status of the reg
+ */
+typedef struct packed {
+    logic [4:0]                 R; 
+    logic [$clog2(`ROBLEN)-1:0] Tag;
+    logic                       plus;
+} MAP_TABLE;
+
+/*
+ * CDB
+ * Record the finished instr from Complete stage
+ */
+typedef struct packed {
+    logic [4:0] R;
+    logic [$clog2(`ROBLEN)-1:0] Tag;
+} CDB;
+
+/*
+ * Packet between ROB, RS, Maptable, CDB
+ */
 
 typedef struct packed {
     logic [2:0] [`XLEN-1:0]            V1;
@@ -409,14 +458,14 @@ typedef struct packed {
 } ROB_RS_PACKET;//
 
 typedef struct packed {
-    logic [2:0] [`XLEN-1:0]           	value;//modify is_buffer
-    logic [2:0] [$clog2(`ROBLEN)-1:0]       	tag;//CDBID
-    logic [2:0]					valid;
+    logic [2:0] [`XLEN-1:0]           value;//modify is_buffer
+    logic [2:0] [$clog2(`ROBLEN)-1:0] tag;//CDBID
+    logic [2:0]				 	      valid;
 } CDB_RS_PACKET;
 
 typedef struct packed {
-    logic [2:0] [$clog2(`ROBLEN)-1:0]       	T;//ROBID
-    logic [2:0]					valid;  
+    logic [2:0] [$clog2(`ROBLEN)-1:0] T;//ROBID
+    logic [2:0]					      valid;  
 } MT_RS_PACKET;//
 
 typedef struct packed {
@@ -428,7 +477,31 @@ typedef struct packed {
 } IS_RS_PACKET;
 
 typedef struct packed {
+    /*
+    // Prev
     RS_LINE [2:0] lines;
+    */
+    INST              inst;
+    logic [`XLEN-1:0] PC;
+    logic [`XLEN-1:0] NPC; // PC + 4
+
+    logic [`XLEN-1:0] rs1_value; // reg A value
+    logic [`XLEN-1:0] rs2_value; // reg B value
+
+    ALU_OPA_SELECT opa_select; // ALU opa mux select (ALU_OPA_xxx *)
+    ALU_OPB_SELECT opb_select; // ALU opb mux select (ALU_OPB_xxx *)
+
+    logic [4:0] dest_reg_idx;  // destination (writeback) register index
+    ALU_FUNC    alu_func;      // ALU function select (ALU_xxx *)
+    logic       rd_mem;        // Does inst read memory?
+    logic       wr_mem;        // Does inst write memory?
+    logic       cond_branch;   // Is inst a conditional branch?
+    logic       uncond_branch; // Is inst an unconditional branch?
+    logic       halt;          // Is this a halt?
+    logic       illegal;       // Is this instruction illegal?
+    logic       csr_op;        // Is this a CSR operation? (we only used this as a cheap way to get return code)
+
+    logic       valid;
 } RS_IS_PACKET;
 
 typedef struct packed {
