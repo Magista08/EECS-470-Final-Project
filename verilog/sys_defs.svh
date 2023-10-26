@@ -365,7 +365,7 @@ typedef struct packed {
     logic [$clog2(`RSLEN)-1:0]		RSID;
 
     INST  inst;
-    logic busy;
+    logic busy; // 0: 
     
     logic [$clog2(`ROBLEN)-1:0]	T; //ROBID
     logic [$clog2(`ROBLEN)-1:0] T1;//ROBID    
@@ -409,7 +409,7 @@ typedef struct packed {
  */
 
 typedef struct packed {
-    logic [2:0] [$clog2(`ROBLEN)-1:0]  Tag;
+    logic [$clog2(`ROBLEN)-1:0]  Tag;
 
     INST              inst;
     logic [4:0]       R;
@@ -449,18 +449,18 @@ typedef struct packed {
  */
 
 typedef struct packed {
-    logic [2:0] [`XLEN-1:0]            V1;
-    logic [2:0] [`XLEN-1:0]		       V2;
-    logic [2:0] [$clog2(`ROBLEN)-1:0]  T1;//ROBID    
-    logic [2:0] [$clog2(`ROBLEN)-1:0]  T2;//ROBID
-    logic [2:0]					       valid1;
-    logic [2:0]					       valid2;
+    logic [`XLEN-1:0]            V1;
+    logic [`XLEN-1:0]		     V2;
+    logic [$clog2(`ROBLEN)-1:0]  T1;//ROBID    
+    logic [$clog2(`ROBLEN)-1:0]  T2;//ROBID
+    logic 					     valid1;
+    logic 					     valid2;
 } ROB_RS_PACKET;//
 
 typedef struct packed {
-    logic [2:0] [`XLEN-1:0]           value;//modify is_buffer
-    logic [2:0] [$clog2(`ROBLEN)-1:0] tag;//CDBID
-    logic [2:0]				 	      valid;
+    logic [`XLEN-1:0]           value;//modify is_buffer
+    logic [$clog2(`ROBLEN)-1:0] tag;//CDBID
+    logic 				 	    valid;
 } CDB_RS_PACKET;
 
 typedef struct packed {
@@ -469,7 +469,7 @@ typedef struct packed {
 } MT_RS_PACKET;//
 
 typedef struct packed {
-    DP_PACKET [2:0] 			packet;
+    DP_IS_PACKET [2:0] 			packet;
 } DP_RS_PACKET;
 
 typedef struct packed {

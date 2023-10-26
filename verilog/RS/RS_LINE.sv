@@ -47,7 +47,7 @@ module RS_LINE (
     always_comb begin
 	casez (sel)
 		2'b00: begin
-			//unchanged
+			//empty the line
 			if (empty) begin
 				n_rs_line.busy = 0;	
 			end else begin
