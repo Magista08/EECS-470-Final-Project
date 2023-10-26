@@ -377,7 +377,7 @@ typedef struct packed {
     logic halt;
     logic ready; // 0: not ready 1: ready
 
-    // Characteristics for instr
+    // Characteristics for DR_PACKET
     /* This is mainly for the EX_PACKET */ 
     logic [`XLEN-1:0] PC;
     logic [`XLEN-1:0] NPC; // PC + 4
@@ -409,12 +409,12 @@ typedef struct packed {
  */
 
 typedef struct packed {
+    // Characteristics for RS
     logic [$clog2(`ROBLEN)-1:0]  Tag;
 
     INST              inst;
     logic [4:0]       R;
     logic [`XLEN-1:0] V;
-
 } ROB_LINE;
 
 typedef struct packed{
@@ -451,6 +451,7 @@ typedef struct packed {
 typedef struct packed {
     logic [`XLEN-1:0]            V1;
     logic [`XLEN-1:0]		     V2;
+    logic [$clog2(`ROBLEN)-1:0]  T;
     logic [$clog2(`ROBLEN)-1:0]  T1;//ROBID    
     logic [$clog2(`ROBLEN)-1:0]  T2;//ROBID
     logic 					     valid1;
