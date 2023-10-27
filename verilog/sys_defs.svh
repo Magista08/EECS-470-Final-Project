@@ -24,8 +24,8 @@
 `define N 1
 
 // sizes
-`define ROBLEN xx
-`define RSLEN xx
+`define ROBLEN 64
+`define RSLEN 32
 //`define PHYS_REG_SZ (32 + `ROB_SZ)
 
 // worry about these later
@@ -370,12 +370,11 @@ typedef struct packed {
     logic [$clog2(`ROBLEN)-1:0]	T; //ROBID
     logic [$clog2(`ROBLEN)-1:0] T1;//ROBID    
     logic [$clog2(`ROBLEN)-1:0] T2;//ROBID
+    logic                       valid1;
+    logic                       valid2;
 
     logic [`XLEN-1:0]           V1;
     logic [`XLEN-1:0]			V2;
-
-    logic halt;
-    logic ready; // 0: not ready 1: ready
 
     // Characteristics for DR_PACKET
     /* This is mainly for the EX_PACKET */ 
@@ -452,8 +451,8 @@ typedef struct packed {
     logic [`XLEN-1:0]            V1;
     logic [`XLEN-1:0]		     V2;
     logic [$clog2(`ROBLEN)-1:0]  T;
-    logic [$clog2(`ROBLEN)-1:0]  T1;//ROBID    
-    logic [$clog2(`ROBLEN)-1:0]  T2;//ROBID
+    //logic [$clog2(`ROBLEN)-1:0]  T1;//ROBID    
+    //logic [$clog2(`ROBLEN)-1:0]  T2;//ROBID
     logic 					     valid1;
     logic 					     valid2;
 } ROB_RS_PACKET;//
@@ -465,8 +464,16 @@ typedef struct packed {
 } CDB_RS_PACKET;
 
 typedef struct packed {
-    logic [2:0] [$clog2(`ROBLEN)-1:0] T;//ROBID
-    logic [2:0]					      valid;  
+    logic  [$clog2(`ROBLEN)-1:0] T1;//ROBID
+    logic  [$clog2(`ROBLEN)-1:0] T2;
+
+    // T_pluse indicates 2 conditions: 
+    //1.source register in MT is empty(usually for the 1st overall)
+    //2.ROB# with + bit
+    logic                        T1_plus; 
+    logic                        T2_plus;
+
+    logic					     valid;  
 } MT_RS_PACKET;//
 
 typedef struct packed {
@@ -506,7 +513,7 @@ typedef struct packed {
 } RS_IS_PACKET;
 
 typedef struct packed {
-    logic [2:0]				inserted;//to DP
+    //logic [2:0]				inserted;//to DP
     logic [1:0]				empty_num;//to DP
 } RS_DP_PACKET;
 

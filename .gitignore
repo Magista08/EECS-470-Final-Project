@@ -50,3 +50,6 @@ novas*
 # don't ignore the correct_out folder
 output/
 !correct_out/*
+
+# Backup Files
+*.bak
