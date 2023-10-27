@@ -291,6 +291,8 @@ typedef struct packed {
  * Data exchanged from the ID to the EX stage
  */
 typedef struct packed {
+    logic [$clog2(`ROBLEN)-1:0]	T; //ROBID
+
     INST              inst;
     logic [`XLEN-1:0] PC;
     logic [`XLEN-1:0] NPC; // PC + 4
@@ -473,7 +475,8 @@ typedef struct packed {
     logic                        T1_plus; 
     logic                        T2_plus;
 
-    logic					     valid;  
+    logic					     valid1;
+    logic					     valid2;  
 } MT_RS_PACKET;//
 
 typedef struct packed {
@@ -513,7 +516,12 @@ typedef struct packed {
 } RS_IS_PACKET;
 
 typedef struct packed {
-    logic [$clog2('RSLEN)-1:0]				empty_num;//to DP
+    logic [1:0]				empty_num;//to DP
 } RS_DP_PACKET;
+
+typedef struct packed{
+    logic [4:0] dest_reg_idx;
+    logic [`$clog2(`ROBLEN)-1:0] T;
+} CURRENT_MT_TABLE;
 
 `endif // __SYS_DEFS_SVH__

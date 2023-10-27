@@ -45,8 +45,7 @@ module RS (
     output DP_IS_PACKET [2:0] is_packet_out,
     output RS_DP_PACKET  dp_packet_out//to DP
 );
-    RS_LINE [`RSLEN-1:0] rs_table;
-    DP_IS_PACKET         insert_inst;
+    RS_LINE [`RSLEN-1:0]      rs_table;
     
     // Find lines that are empty and that are needed to be emptied 
     logic [`RSLEN-1:0] clear_signal;  // 0: not needed for empty 1: need to empty this line
@@ -56,7 +55,6 @@ module RS (
     logic [`RSLEN-1:0] [$clog2(3)-1:0] sel_buffer;
     // logic [`RSLEN-1:0] [$clog2(3)-1:0] old_sel_buffer;
     logic [2:0] [`RSLEN-1:0] slots;   // 0: Cannot insert        1: Able to insert
-    // logic inst_select;
 
     // Determine which instr to output
     logic [$clog2(3)-1:0] is_packet_count;
@@ -66,6 +64,16 @@ module RS (
     logic [$clog2(`RSLEN)-1:0]  posi;
     logic [`RSLEN-1:0]          read_inst_sig;
     
+    // Record the final destination
+    CURRENT_MT_TABLE [2:0] new_mt_table;
+    assign new_mt_table[0].dest_reg_idx = dp_packet_in[0].dest_reg_idx;
+    assign new_mt_table[1].dest_reg_idx = dp_packet_in[1].dest_reg_idx;
+    assign new_mt_table[2].dest_reg_idx = dp_packet_in[2].dest_reg_idx;
+
+    assgin new_mt_table[0].T            = dp_packet_in[0].T;
+    assgin new_mt_table[1].T            = dp_packet_in[1].T;
+    assgin new_mt_table[2].T            = dp_packet_in[2].T;
+
     // Update RS Table
     generate
         sel_buffer = {$clog2(3){1'b0}};
@@ -77,6 +85,7 @@ module RS (
                                    slots[2][i] ? 0 : 3;
             assign read_inst_sig[i] = (sel_buffer[i] != 3) ? 1'b1 : 1'b0;
 
+
             // One Line Change
             RS_LINE line(
                 //input
@@ -86,7 +95,8 @@ module RS (
                 .clear(clear_signal[i]),
                 .squash_flag(squash_flag), 
                 .line_id((i)),
-                .dp_packet(dp_packet_in[sel_buffer[i] % 3]), // ?
+                .new_mt_table(new_mt_table), // new
+                .dp_packet(insert_inst[i]), 
                 .mt_packet(mt_packet),
                 .rob_packet(rob_in),
                 .cdb_packet(cdb_packet),
@@ -100,9 +110,11 @@ module RS (
     endgenerate
     // Reset
     /****************************************************************************************************************/
+    /*
     always_ff @(posedge clock) begin
         if (reset);
     end
+    */
     /****************************************************************************************************************/
 
     // Psel for ready bit
@@ -128,6 +140,7 @@ module RS (
             // Packet out
             if (rs_is_posi[i] == 0) continue;
             posi <= $clog2(rs_is_posi[i]); 
+            is_packet_out[i].T             <= rs_table[posi].T;
             is_packet_out[i].inst          <= rs_table[posi].inst;
             is_packet_out[i].PC            <= rs_table[posi].PC;
             is_packet_out[i].NPC           <= rs_table[posi].NPC;
@@ -213,7 +226,7 @@ module RS (
                 end
         end
     end
-    assign dp_packet_out.empty_num = count;
+    assign dp_packet_out.empty_num = (count>3) ? 3 : count;
 
     // Clear the emptied_lines based on psel
     PSEL clean_psel(
