@@ -23,7 +23,7 @@ module RS_LINE (
     logic 					valid_flag1;
 	logic 					valid_flag2;
 
-	assign		valid_flag1 = (rob_packet.T1 == cdb_packet.tag) || mt_packet.T1_plus;
+	assign		valid_flag1 = (rob_packet.T1 == cdb_packet.tag) || mt_packet.T1_plus;  //judge whether T1 in RS is valid
 	assign		valid_flag2 = (rob_packet.T2 == cdb_packet.tag) || mt_packet.T2_plus;
 
     /*  ready
