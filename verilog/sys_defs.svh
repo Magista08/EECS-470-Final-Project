@@ -513,8 +513,7 @@ typedef struct packed {
 } RS_IS_PACKET;
 
 typedef struct packed {
-    //logic [2:0]				inserted;//to DP
-    logic [1:0]				empty_num;//to DP
+    logic [$clog2('RSLEN)-1:0]				empty_num;//to DP
 } RS_DP_PACKET;
 
 `endif // __SYS_DEFS_SVH__

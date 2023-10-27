@@ -204,6 +204,17 @@ module RS (
         assign emptied_lines[j] = rs_table[j].busy ? 1'b1 : 1'b0;
     end
 
+    logic [$clog2('RSLEN)-1:0] count;
+    always_comb begin
+        count = 0;
+        for (int k = 0; k < `RSLEN; k++) begin
+                if (!rs_table[i].busy) begin
+                count = count + 1;
+                end
+        end
+    end
+    assign dp_packet_out.empty_num = count;
+
     // Clear the emptied_lines based on psel
     PSEL clean_psel(
         // input
