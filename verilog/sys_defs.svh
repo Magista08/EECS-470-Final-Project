@@ -475,7 +475,7 @@ typedef struct packed {
     logic                        T1_plus; 
     logic                        T2_plus;
 
-    logic					     valid1;
+    logic					     valid1; //valid = 1 means there is inst. in the mt
     logic					     valid2;  
 } MT_RS_PACKET;//
 
