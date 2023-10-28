@@ -64,27 +64,26 @@ TCL_SCRIPT = synth/470synth.tcl
 # options for TESTBENCH: ps4_test.sv                   | ps8_test.sv| rps4_test.sv
 TESTBENCH   = RS_tb.sv
 			  
-SOURCES     = RS.sv \
-			  RS_LINE.sv 
+SOURCES     = RS.sv 
 HEADERS	    = ../sys_defs.svh \
 			  ../ISA.svh 
 SYNTH_FILES = RS.vg # P1 NOTE: synthesis is not tested in project 1
-
+CHILD_SOURCE = RS_LINE.sv
 # the .vg rule is automatically generated below when the name of the file matches its top level module
 # P1 NOTE: this doesn't work for ps4-assign.sv and ps4-if_else.sv, but you don't need synthesis for P1
 
 # the normal simulation executable will run your testbench on the original modules
-simv: $(TESTBENCH) $(SOURCES) $(HEADERS)
+simv: $(TESTBENCH) $(CHILD_SOURCE) $(SOURCES) $(HEADERS)
 	@$(call PRINT_COLOR, 5, compiling the simulation executable $@)
 	@$(call PRINT_COLOR, 3, NOTE: if this is slow to startup: run '"module load vcs verdi synopsys-synth"')
-	$(VCS) $^ -o $@
+	$(VCS) $(TESTBENCH) $(CHILD_SOURCE) $(SOURCES) -o $@
 	@$(call PRINT_COLOR, 6, finished compiling $@)
 # NOTE: we reference variables with $(VARIABLE), and can make use of the automatic variables: ^, @, <, etc
 # see: https://www.gnu.org/software/make/manual/html_node/Automatic-Variables.html for explanations
 
 # a make pattern rule to generate the .vg synthesis files
 # pattern rules use the % as a wildcard to match multiple possible targets
-%.vg: | $(TCL_SCRIPT)
+%.vg: $(SOURCES) $(TCL_SCRIPT) $(HEADERS)
 	@$(call PRINT_COLOR, 5, synthesizing the $* module)
 	@$(call PRINT_COLOR, 3, this might take a while...)
 	@$(call PRINT_COLOR, 3, NOTE: if this is slow to startup: run '"module load vcs verdi synopsys-synth"')
