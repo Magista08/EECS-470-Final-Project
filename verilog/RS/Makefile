@@ -65,14 +65,16 @@ TCL_SCRIPT = synth/470synth.tcl
 TESTBENCH   = RS_tb.sv
 			  
 SOURCES     = RS.sv \
-			  RS_LINE.sv
+			  RS_LINE.sv 
+HEADERS	    = ../sys_defs.svh \
+			  ../ISA.svh 
 SYNTH_FILES = RS.vg # P1 NOTE: synthesis is not tested in project 1
 
 # the .vg rule is automatically generated below when the name of the file matches its top level module
 # P1 NOTE: this doesn't work for ps4-assign.sv and ps4-if_else.sv, but you don't need synthesis for P1
 
 # the normal simulation executable will run your testbench on the original modules
-simv: $(TESTBENCH) $(SOURCES)
+simv: $(TESTBENCH) $(SOURCES) $(HEADERS)
 	@$(call PRINT_COLOR, 5, compiling the simulation executable $@)
 	@$(call PRINT_COLOR, 3, NOTE: if this is slow to startup: run '"module load vcs verdi synopsys-synth"')
 	$(VCS) $^ -o $@

@@ -1,4 +1,4 @@
-`include "verilog/sys_defs.svh"
+`include "../sys_defs.svh"
 
 module PSEL (
     input logic [`RSLEN-1:0]     req0,
@@ -23,7 +23,7 @@ module PSEL (
     assign gnt2[0] = ~req2[0];
     assign pre_req2[0] = req2[0];
     genvar i;
-    for(i = 1; i<'RSLEN; i++)begin
+    for(i = 1; i<`RSLEN; i++)begin
         assign gnt0[i] = ~req0[i] & pre_req0[i-1];  
         assign pre_req0[i] = req0[i] & pre_req0[i-1];
         assign gnt1[i] = ~req1[i] & pre_req1[i-1];  
@@ -90,7 +90,6 @@ module RS (
 
     // Update RS Table
     generate
-        sel_buffer = {$clog2(3){1'b0}};
         genvar i;
         for (i=0; i<`RSLEN; i++) begin
 	        // whether select
@@ -106,7 +105,7 @@ module RS (
             assign other_dest_reg2 = (sel_buffer[i] == 2) ? dp_packet_in[1].dest_reg_idx : 0;
 
             // One Line Change
-            RS_LINE line(
+            RS_LINE line (
                 //input
                 .clock(clock),
                 .reset(reset),
@@ -114,7 +113,6 @@ module RS (
                 .clear(clear_signal[i]),
                 .squash_flag(squash_flag), 
                 .line_id((i)),
-                .new_mt_table(new_mt_table), // new
                 .dp_packet(dp_packet_in[sel_buffer[i]%3]), 
                 .mt_packet(mt_packet_in[sel_buffer[i]%3]),
                 .rob_packet(rob_packet_in[sel_buffer[i]%3]),
@@ -128,7 +126,7 @@ module RS (
                 .my_position(sel_buffer[i]%3),
                 
                 //output
-                .ready(ready[i]),
+                .not_ready(ready[i]),
                 .rs_line(rs_table[i])
             );
 	    

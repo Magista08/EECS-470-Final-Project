@@ -2,32 +2,31 @@
 	我们决定将superscalar的way number改为packet外，所以sys_defs中
 	打包的【2:0】都去掉
 */
-`include "verilog/sys_defs.svh"
+`include "../sys_defs.svh"
 
 module RS_LINE (
-    input             		clock, reset, enable,
-    input 	 				clear,             // whether clear the RS_line
-    input  					squash_flag,
-    input                  [$clog2(`ROBLEN)-1:0]line_id,
-    input					sel,
-    input DP_IS_PACKET 		dp_packet,
-    input MT_RS_PACKET  	mt_packet,
-    input ROB_RS_PACKET		rob_packet,
-    input CDB_RS_PACKET	[2:0]	cdb_packet,
+	// INPUT
 
+    input             	       clock, reset, enable,
+    input 	 				   clear,             // whether clear the RS_line
+    input  					   squash_flag,
+    input [$clog2(`ROBLEN)-1:0]line_id,
+    // input					sel,
+    input DP_IS_PACKET 		   dp_packet,
+    input MT_RS_PACKET  	   mt_packet,
+    input ROB_RS_PACKET		   rob_packet,
+    input CDB_RS_PACKET	[2:0]  cdb_packet,
 
 	// the other 2 tags (in order)
 	input [$clog2(`ROBLEN)-1:0] other_T1,
 	input [$clog2(`ROBLEN)-1:0] other_T2,
 	// the other 2 insts (in order)
-	// input  other_inst1,
-	// input  other_inst2,
-	input  other_dest_reg1,
-	input  other_dest_reg2,
+	input  						other_dest_reg1,
+	input  						other_dest_reg2,
 	// position
-	input [1:0] my_position,
+	input [1:0] 				my_position,
 
-
+	// OUTPUT
 	output logic  			not_ready,
     output RS_LINE  		rs_line
 );

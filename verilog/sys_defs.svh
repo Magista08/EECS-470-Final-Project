@@ -420,13 +420,15 @@ typedef struct packed {
     logic [`XLEN-1:0] V;
 } ROB_LINE;
 
+/*
 typedef struct packed{
-    ROB_LINE [ROBLEN-1:0] line;
-    /*
-    logic [$clog2(`ROBLEN)-1:0] head;
-    loigc [$clog2(`ROBLEN)-1:0] tail;
-    */
+    ROB_LINE [`ROBLEN-1:0] line;
+
+    // logic [$clog2(`ROBLEN)-1:0] head;
+    // loigc [$clog2(`ROBLEN)-1:0] tail;
+    
 } ROB_TABLE;
+*/
 
 /*
  * MapTable
@@ -523,7 +525,7 @@ typedef struct packed {
 
 typedef struct packed{
     logic [4:0] dest_reg_idx;
-    logic [`$clog2(`ROBLEN)-1:0] T;
+    logic [$clog2(`ROBLEN)-1:0] T;
 } CURRENT_MT_TABLE;
 
 `endif // __SYS_DEFS_SVH__
