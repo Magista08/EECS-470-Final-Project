@@ -314,6 +314,8 @@ typedef struct packed {
     logic       csr_op;        // Is this a CSR operation? (we use this to get return code)
 
     logic       valid;
+    logic       rs1_instruction;
+    logic       rs2_instruction;
 } DP_IS_PACKET;
 
 /**
@@ -482,11 +484,11 @@ typedef struct packed {
 typedef struct packed {
     DP_IS_PACKET [2:0] 			packet;
 } DP_RS_PACKET;
-
+/*
 typedef struct packed {
     logic [2:0] 			excuted;
 } IS_RS_PACKET;
-
+*/
 typedef struct packed {
     /*
     // Prev

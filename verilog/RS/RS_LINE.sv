@@ -13,7 +13,20 @@ module RS_LINE (
     input DP_IS_PACKET 		dp_packet,
     input MT_RS_PACKET  	mt_packet,
     input ROB_RS_PACKET		rob_packet,
-    input CDB_RS_PACKET		cdb_packet,
+    input CDB_RS_PACKET	[2:0]	cdb_packet,
+
+
+	// the other 2 tags (in order)
+	input [$clog2(`ROBLEN)-1:0] other_T1,
+	input [$clog2(`ROBLEN)-1:0] other_T2,
+	// the other 2 insts (in order)
+	// input  other_inst1,
+	// input  other_inst2,
+	input  other_dest_reg1,
+	input  other_dest_reg2,
+	// position
+	input [1:0] my_position,
+
 
 	output logic  			not_ready,
     output RS_LINE  		rs_line
@@ -41,7 +54,7 @@ module RS_LINE (
 		//not_ready = ~(valid_flag1 && valid_flag2 && ~empty);
 
 		// Clear the RS line(n_rs_line)
-		if(clear) begin
+		if(clear || reset) begin // add reset
 			n_rs_line = '{
 				0,                // RSID
 				`NOP,             // inst
@@ -81,13 +94,61 @@ module RS_LINE (
 					n_rs_line.valid2 = valid_flag2;
 					n_rs_line.RSID = line_id;
 					n_rs_line.T = rob_packet.T;
-					n_rs_line.T1 = valid_flag1? 0: mt_packet.T1; // 1.Cycle problem? 2.RS tags in RS are from MT
-					n_rs_line.T2 = valid_flag2? 0: mt_packet.T2;
+					// n_rs_line.T1 = valid_flag1? 0: mt_packet.T1; // 1.Cycle problem? 2.RS tags in RS are from MT
+					// n_rs_line.T2 = valid_flag2? 0: mt_packet.T2;
+
+					if (my_position == 2'b00) begin
+						n_rs_line.T1 = valid_flag1? 0:mt_packet.T1;
+					end else if (my_position == 2'b01) begin
+						n_rs_line.T1 = (dp_packet.rs1_instruction && dp_packet.inst.r.rs1 == other_dest_reg1 && ~other_dest_reg1)? other_T1:
+									    valid_flag1? 0:
+										mt_packet.T1;
+					end else begin
+						n_rs_line.T1 = (dp_packet.rs1_instruction && dp_packet.inst.r.rs1 == other_dest_reg2 && ~other_dest_reg2)? other_T2:
+									   (dp_packet.rs1_instruction && dp_packet.inst.r.rs1 == other_dest_reg1 && ~other_dest_reg1)? other_T1:
+									   	valid_flag1? 0:
+										mt_packet.T1;
+					end
+
+					if (my_position == 2'b00) begin
+						n_rs_line.T2 = valid_flag2? 0:mt_packet.T2;
+					end else if (my_position == 2'b01) begin
+						n_rs_line.T2 = (dp_packet.rs2_instruction && dp_packet.inst.r.rs2 == other_dest_reg1 && ~other_dest_reg1)? other_T1:
+									    valid_flag2? 0:
+										mt_packet.T2;
+					end else begin
+						n_rs_line.T2 = (dp_packet.rs2_instruction && dp_packet.inst.r.rs2 == other_dest_reg2 && ~other_dest_reg2)? other_T2:
+									   (dp_packet.rs2_instruction && dp_packet.inst.r.rs2 == other_dest_reg1 && ~other_dest_reg1)? other_T1:
+									   	valid_flag2? 0:
+										mt_packet.T2;
+					end
+
+
+
+
 					n_rs_line.busy = 1;                          // busy = 1 when enable
 
-					// data from dp_packet
-					n_rs_line.V1 = (dp_packet.T1 == cdb_packet.tag)? cdb_packet.value: (~mt_packet.valid1) ? dp_packet.rs1_value : (mt_packet.T1_plus)? rob_packet.V1: 0// 如何填值？
-					n_rs_line.V2 = valid_flag2? dp_packet.rs2_value: 0;  // if RS2 won't be used? Due to inst. type, should be correct
+
+					// data from ROB, CDB, Regfile
+					n_rs_line.V1 = (cdb_packet[0].valid && dp_packet.T1 == cdb_packet[0].tag)? cdb_packet[0].value:
+								   (cdb_packet[1].valid && dp_packet.T1 == cdb_packet[1].tag)? cdb_packet[1].value:
+								   (cdb_packet[2].valid && dp_packet.T1 == cdb_packet[2].tag)? cdb_packet[2].value:
+								   (rob_packet.valid1 && mt_packet.valid1 && mt_packet.T1_plus)? rob_packet.V1:
+								    dp_packet.rs1_value;
+
+					n_rs_line.V2 = (cdb_packet[0].valid && dp_packet.T2 == cdb_packet[0].tag)? cdb_packet[0].value:
+								   (cdb_packet[1].valid && dp_packet.T2 == cdb_packet[1].tag)? cdb_packet[1].value:
+								   (cdb_packet[2].valid && dp_packet.T2 == cdb_packet[2].tag)? cdb_packet[2].value:
+								   (rob_packet.valid2 && mt_packet.valid2 && mt_packet.T2_plus)? rob_packet.V2:
+								    dp_packet.rs2_value;
+													
+					
+					// n_rs_line.V1 = (dp_packet.T1 == cdb_packet.tag)? cdb_packet.value: 
+					// 			   (~mt_packet.valid1)? dp_packet.rs1_value: 
+					// 			   (mt_packet.T1_plus)? rob_packet.V1: 0;
+					// n_rs_line.V2 = (dp_packet.T2 == cdb_packet.tag)? cdb_packet.value: (~mt_packet.valid1) ? dp_packet.rs1_value : (mt_packet.T1_plus)? rob_packet.V1: 0;
+					
+										
 					n_rs_line.inst = dp_packet.inst;
 					n_rs_line.PC = dp_packet.PC;
 					n_rs_line.NPC = dp_packet.NPC;
@@ -180,8 +241,25 @@ module RS_LINE (
 					n_rs_line.T1 = (rs_line.T1 == cdb_packet.tag)? 0:(rs_line.T1 == mt_packet.T1_plus)? 0: rs_line.T1; // 1.Cycle problem? 2.RS tags in RS are from MT
 					n_rs_line.T2 = (rs_line.T2 == cdb_packet.tag)? 0:(rs_line.T2 == mt_packet.T2_plus)? 0: rs_line.T2;
 					n_rs_line.busy = 1;                          // busy = 1 before entering exe
-					n_rs_line.V1 = (rs_line.T1 == cdb_packet.tag)? cdb_packet.value:mt_packet.T1_plus? dp_packet.rs1_value: rs_line.V1;  // value要改
-					n_rs_line.V2 = (rs_line.T2 == cdb_packet.tag)? cdb_packet.value:(rs_line.T2 == mt_packet.T2_plus)? dp_packet.rs2_value: rs_line.V2;   // value要改
+
+
+					// n_rs_line.V1 = (rs_line.T1 == cdb_packet.tag)? cdb_packet.value:mt_packet.T1_plus? dp_packet.rs1_value: rs_line.V1;  // value要改
+					// n_rs_line.V2 = (rs_line.T2 == cdb_packet.tag)? cdb_packet.value:(rs_line.T2 == mt_packet.T2_plus)? dp_packet.rs2_value: rs_line.V2;   // value要改
+					
+
+					// CDB or no change
+					n_rs_line.V1 = (cdb_packet[0].valid && rs_line.T1 == cdb_packet[0].tag)? cdb_packet[0].value:
+								   (cdb_packet[1].valid && rs_line.T1 == cdb_packet[1].tag)? cdb_packet[1].value:
+								   (cdb_packet[2].valid && rs_line.T1 == cdb_packet[2].tag)? cdb_packet[2].value:
+								   rs_line.V1;
+
+
+					n_rs_line.V2 = (cdb_packet[0].valid && rs_line.T2 == cdb_packet[0].tag)? cdb_packet[0].value:
+								   (cdb_packet[1].valid && rs_line.T2 == cdb_packet[1].tag)? cdb_packet[1].value:
+								   (cdb_packet[2].valid && rs_line.T2 == cdb_packet[2].tag)? cdb_packet[2].value:
+								   rs_line.V2;				
+					
+					
 					// below keeps unchanged
 					n_rs_line.inst = rs_line.inst;
 					n_rs_line.PC = rs_line.PC;
