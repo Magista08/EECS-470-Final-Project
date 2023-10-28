@@ -68,6 +68,7 @@ SOURCES     = RS.sv
 HEADERS	    = ../sys_defs.svh \
 			  ../ISA.svh 
 SYNTH_FILES = RS.vg # P1 NOTE: synthesis is not tested in project 1
+CHILD_MODULES = RS_LINE
 CHILD_SOURCE = RS_LINE.sv
 # the .vg rule is automatically generated below when the name of the file matches its top level module
 # P1 NOTE: this doesn't work for ps4-assign.sv and ps4-if_else.sv, but you don't need synthesis for P1
@@ -94,7 +95,6 @@ simv: $(TESTBENCH) $(CHILD_SOURCE) $(SOURCES) $(HEADERS)
 
 # add all sources as extra dependencies for each SYNTH_FILES target
 # this is used when SOURCES="$^" uses the automatic variable $^ to reference all dependencies
-$(SYNTH_FILES): $(SOURCES)
 
 # the synthesis executable runs your testbench on the synthesized versions of your modules
 syn_simv: $(TESTBENCH) $(SYNTH_FILES)
@@ -118,7 +118,7 @@ slack:
 
 sim: simv
 	@$(call PRINT_COLOR, 5, running $<)
-	./simv | tee program.out
+	./$< | tee program.out
 	@$(call PRINT_COLOR, 2, output saved to program.out)
 
 syn: syn_simv

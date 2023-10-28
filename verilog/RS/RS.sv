@@ -34,16 +34,16 @@ module PSEL (
 endmodule 
 
 module RS (
-    input             		clock, reset, enable,
-    input  			        squash_flag,   // branch predictor signal
-    input DP_IS_PACKET [2:0] dp_packet_in,
-    input MT_RS_PACKET [2:0]  	mt_packet_in,
-    input ROB_RS_PACKET [2:0]	    rob_packet_in,
-    input CDB_RS_PACKET [2:0]	cdb_packet_in,
-    //input IS_RS_PACKET		is_packet_in,
+    input             		  clock, reset, enable,
+    input  			          squash_flag,   // branch predictor signal
+    input DP_IS_PACKET [2:0]  dp_packet_in,
+    input MT_RS_PACKET [2:0]  mt_packet_in,
+    input ROB_RS_PACKET [2:0] rob_packet_in,
+    input CDB_RS_PACKET [2:0] cdb_packet_in,
+    //input IS_RS_PACKET	  is_packet_in,
    
-    output RS_IS_PACKET [2:0] is_packet_out,
-    output RS_DP_PACKET  dp_packet_out//to DP
+    output RS_IS_PACKET [2:0] ALU_ADD,
+    output RS_DP_PACKET       dp_packet_out//to DP
 );
     RS_LINE [`RSLEN-1:0]      rs_table;
     
@@ -57,9 +57,9 @@ module RS (
     logic [2:0] [`RSLEN-1:0] slots;   // 0: Cannot insert        1: Able to insert
 
     // Determine which instr to output
-    logic [$clog2(3)-1:0] is_packet_count;
-    logic [$clog2(3)-1:0] temp_is_packet_count;
-    logic       [`RSLEN-1:0]    ready;
+    //logic [$clog2(3)-1:0] is_packet_count;
+    //logic [$clog2(3)-1:0] temp_is_packet_count;
+    logic       [`RSLEN-1:0]    not_ready;
     logic [2:0] [`RSLEN-1:0]    rs_is_posi;
     logic [$clog2(`RSLEN)-1:0]  posi;
     logic [`RSLEN-1:0]          read_inst_sig;
@@ -89,8 +89,9 @@ module RS (
 
 
     // Update RS Table
+    genvar i;
     generate
-        genvar i;
+        
         for (i=0; i<`RSLEN; i++) begin
 	        // whether select
             assign sel_buffer[i] = slots[0][i] ? 2 :
@@ -105,7 +106,8 @@ module RS (
             assign other_dest_reg2 = (sel_buffer[i] == 2) ? dp_packet_in[1].dest_reg_idx : 0;
 
             // One Line Change
-            RS_LINE line (
+            /*
+            RS_LINE RSL(
                 //input
                 .clock(clock),
                 .reset(reset),
@@ -126,25 +128,18 @@ module RS (
                 .my_position(sel_buffer[i]%3),
                 
                 //output
-                .not_ready(ready[i]),
+                .not_ready(not_ready[i]),
                 .rs_line(rs_table[i])
             );
+            */           
 	    
         end
     endgenerate
-    // Reset
-    /****************************************************************************************************************/
-    /*
-    always_ff @(posedge clock) begin
-        if (reset);
-    end
-    */
-    /****************************************************************************************************************/
-
+    
     // Psel for ready bit
     PSEL is_psel(
         // input
-        .req0(~ready),
+        .req0(not_ready),
 
         // output
         .gnt0(rs_is_posi[0]),
@@ -153,7 +148,7 @@ module RS (
     );
     always_ff @(posedge clock) begin
         // Re-init
-        is_packet_count <= 0;
+        //is_packet_count <= 0;
         clear_signal    <= {`RSLEN{1'b0}};
 
         
@@ -162,31 +157,54 @@ module RS (
             // FU detect hazard
 
             // Packet out
-            if (rs_is_posi[i] == 0) continue;
-            posi <= $clog2(rs_is_posi[i]); 
-            is_packet_out[i].T             <= rs_table[posi].T;
-            is_packet_out[i].inst          <= rs_table[posi].inst;
-            is_packet_out[i].PC            <= rs_table[posi].PC;
-            is_packet_out[i].NPC           <= rs_table[posi].NPC;
+            if (rs_is_posi[i] == 0) begin
+                is_packet_out[i] <={
+                    {$clog2(`ROBLEN){1'b0}}, // T
+                    `NOP,                    // inst
+                    {$clog2(`XLEN){1'b0}},   // RS1_value
+                    {$clog2(`XLEN){1'b0}},   // RS2_value
+                    {$clog2(`XLEN){1'b0}},   // opa_select
+                    {$clog2(`XLEN){1'b0}},   // opb_select
+                    4'b0,                    // dest_reg_idx
+                    OPA_IS_RS1,              // OPA_SELECT
+                    OPB_IS_RS2,              // OPB_SELECT
+                    `ZERO_REG,               // dest_reg_idx
+                    ALU_ADD,                 // alu_func
+                    1'b0,                    // rd_mem
+                    1'b0,                    // wr_mem
+                    1'b0,                    // cond_branch
+                    1'b0,                    // uncond_branch
+                    1'b0,                    // halt
+                    1'b0,                    // illegal
+                    1'b0,                    // csr_op
+                    1'b0                     // valid
+                };
+            end else begin
+                posi <= $clog2(rs_is_posi[i]); 
+                is_packet_out[i].T             <= rs_table[posi].T;
+                is_packet_out[i].inst          <= rs_table[posi].inst;
+                is_packet_out[i].PC            <= rs_table[posi].PC;
+                is_packet_out[i].NPC           <= rs_table[posi].NPC;
 
-            is_packet_out[i].rs1_value     <= rs_table[posi].V1;
-            is_packet_out[i].rs2_value     <= rs_table[posi].V2;
+                is_packet_out[i].rs1_value     <= rs_table[posi].V1;
+                is_packet_out[i].rs2_value     <= rs_table[posi].V2;
 
-            is_packet_out[i].opa_select    <= rs_table[posi].opa_select;
-            is_packet_out[i].opb_select    <= rs_table[posi].opb_select;
-            is_packet_out[i].dest_reg_idx  <= rs_table[posi].dest_reg_idx;
-            is_packet_out[i].alu_func      <= rs_table[posi].alu_func;
-            is_packet_out[i].rd_mem        <= rs_table[posi].rd_mem;
-            is_packet_out[i].wr_mem        <= rs_table[posi].wr_mem;
-            is_packet_out[i].cond_branch   <= rs_table[posi].cond_branch;
-            is_packet_out[i].uncond_branch <= rs_table[posi].uncond_branch;
-            is_packet_out[i].halt          <= rs_table[posi].halt;
-            is_packet_out[i].illegal       <= rs_table[posi].illegal;
-            is_packet_out[i].csr_op        <= rs_table[posi].csr_op;
-            is_packet_out[i].valid         <= rs_table[posi].valid;
+                is_packet_out[i].opa_select    <= rs_table[posi].opa_select;
+                is_packet_out[i].opb_select    <= rs_table[posi].opb_select;
+                is_packet_out[i].dest_reg_idx  <= rs_table[posi].dest_reg_idx;
+                is_packet_out[i].alu_func      <= rs_table[posi].alu_func;
+                is_packet_out[i].rd_mem        <= rs_table[posi].rd_mem;
+                is_packet_out[i].wr_mem        <= rs_table[posi].wr_mem;
+                is_packet_out[i].cond_branch   <= rs_table[posi].cond_branch;
+                is_packet_out[i].uncond_branch <= rs_table[posi].uncond_branch;
+                is_packet_out[i].halt          <= rs_table[posi].halt;
+                is_packet_out[i].illegal       <= rs_table[posi].illegal;
+                is_packet_out[i].csr_op        <= rs_table[posi].csr_op;
+                is_packet_out[i].valid         <= rs_table[posi].valid;
 
-            // Pass the signal that this line is emptied
-            clear_signal[posi] <= 1'b1;
+                // Pass the signal that this line is emptied
+                clear_signal[posi] <= 1'b1;
+            end
         end
         
 
@@ -241,11 +259,11 @@ module RS (
         assign emptied_lines[j] = rs_table[j].busy ? 1'b1 : 1'b0;
     end
 
-    logic [$clog2('RSLEN)-1:0] count;
+    logic [$clog2(`RSLEN)-1:0] count;
     always_comb begin
         count = 0;
         for (int k = 0; k < `RSLEN; k++) begin
-                if (!rs_table[i].busy) begin
+                if (!rs_table[k].busy) begin
                 count = count + 1;
                 end
         end

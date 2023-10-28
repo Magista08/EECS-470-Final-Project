@@ -34,9 +34,16 @@ module RS_LINE (
     logic 					valid_flag1;
 	logic 					valid_flag2;
 
-	assign		valid_flag1 = (rob_packet.T1 == cdb_packet.tag) || mt_packet.T1_plus;  //judge whether T1 in RS is valid
-	assign		valid_flag2 = (rob_packet.T2 == cdb_packet.tag) || mt_packet.T2_plus;
-
+	assign		valid_flag1 = (~mt_packet.valid1) || 
+							  (cdb_packet[0].valid && mt_packet.T1 == cdb_packet[0].tag) || 
+							  (cdb_packet[1].valid && mt_packet.T1 == cdb_packet[1].tag) || 
+							  (cdb_packet[2].valid && mt_packet.T1 == cdb_packet[2].tag) || 
+							  mt_packet.T1_plus;  //judge whether T1 in RS is valid
+	assign		valid_flag2 = (~mt_packet.valid2) || 
+							  (cdb_packet[0].valid && mt_packet.T2 == cdb_packet[0].tag) || 
+							  (cdb_packet[1].valid && mt_packet.T2 == cdb_packet[1].tag) || 
+							  (cdb_packet[2].valid && mt_packet.T2 == cdb_packet[2].tag) || 
+							  mt_packet.T2_plus;
     /*  ready
 	determine ready：decide whether to issue
 	when checking tags, CDB and RS filling are in the same
@@ -129,15 +136,15 @@ module RS_LINE (
 
 
 					// data from ROB, CDB, Regfile
-					n_rs_line.V1 = (cdb_packet[0].valid && dp_packet.T1 == cdb_packet[0].tag)? cdb_packet[0].value:
-								   (cdb_packet[1].valid && dp_packet.T1 == cdb_packet[1].tag)? cdb_packet[1].value:
-								   (cdb_packet[2].valid && dp_packet.T1 == cdb_packet[2].tag)? cdb_packet[2].value:
+					n_rs_line.V1 = (cdb_packet[0].valid && mt_packet.T1 == cdb_packet[0].tag)? cdb_packet[0].value:
+								   (cdb_packet[1].valid && mt_packet.T1 == cdb_packet[1].tag)? cdb_packet[1].value:
+								   (cdb_packet[2].valid && mt_packet.T1 == cdb_packet[2].tag)? cdb_packet[2].value:
 								   (rob_packet.valid1 && mt_packet.valid1 && mt_packet.T1_plus)? rob_packet.V1:
 								    dp_packet.rs1_value;
 
-					n_rs_line.V2 = (cdb_packet[0].valid && dp_packet.T2 == cdb_packet[0].tag)? cdb_packet[0].value:
-								   (cdb_packet[1].valid && dp_packet.T2 == cdb_packet[1].tag)? cdb_packet[1].value:
-								   (cdb_packet[2].valid && dp_packet.T2 == cdb_packet[2].tag)? cdb_packet[2].value:
+					n_rs_line.V2 = (cdb_packet[0].valid && mt_packet.T2 == cdb_packet[0].tag)? cdb_packet[0].value:
+								   (cdb_packet[1].valid && mt_packet.T2 == cdb_packet[1].tag)? cdb_packet[1].value:
+								   (cdb_packet[2].valid && mt_packet.T2 == cdb_packet[2].tag)? cdb_packet[2].value:
 								   (rob_packet.valid2 && mt_packet.valid2 && mt_packet.T2_plus)? rob_packet.V2:
 								    dp_packet.rs2_value;
 													
@@ -233,12 +240,22 @@ module RS_LINE (
 					not_ready = 1;
 				// RS_line filled (busy = 1)
 				end else begin
-					n_rs_line.valid1 = rs_line.T1;     //根据上一个cycle中rs_line中的tag与mt,cdb比较来确定
-					n_rs_line.valid2 = rs_line.valid_flag2;
-					n_rs_line.RSID = rs_line.line_id;
+					n_rs_line.valid1 = ((cdb_packet[0].valid && rs_line.T1 == cdb_packet[0].tag) || 
+										(cdb_packet[1].valid && rs_line.T1 == cdb_packet[1].tag) ||
+										(cdb_packet[2].valid && rs_line.T1 == cdb_packet[2].tag)) ? 1 : rs_line.valid1;     //根据上一个cycle中rs_line中的tag与mt,cdb比较来确定
+					n_rs_line.valid2 = ((cdb_packet[0].valid && rs_line.T2 == cdb_packet[0].tag) || 
+										(cdb_packet[1].valid && rs_line.T2 == cdb_packet[1].tag) ||
+										(cdb_packet[2].valid && rs_line.T2 == cdb_packet[2].tag)) ? 1 : rs_line.valid2;
+					n_rs_line.RSID = rs_line.RSID;
 					n_rs_line.T = rs_line.T;
-					n_rs_line.T1 = (rs_line.T1 == cdb_packet.tag)? 0:(rs_line.T1 == mt_packet.T1_plus)? 0: rs_line.T1; // 1.Cycle problem? 2.RS tags in RS are from MT
-					n_rs_line.T2 = (rs_line.T2 == cdb_packet.tag)? 0:(rs_line.T2 == mt_packet.T2_plus)? 0: rs_line.T2;
+					n_rs_line.T1 = ((cdb_packet[0].valid && rs_line.T1 == cdb_packet[0].tag) || 
+									(cdb_packet[1].valid && rs_line.T1 == cdb_packet[1].tag) ||
+									(cdb_packet[2].valid && rs_line.T1 == cdb_packet[2].tag)) ? 0 :
+									(rs_line.T1 == mt_packet.T1_plus) ? 0 : rs_line.T1; // 1.Cycle problem? 2.RS tags in RS are from MT
+					n_rs_line.T2 = ((cdb_packet[0].valid && rs_line.T2 == cdb_packet[0].tag) || 
+									(cdb_packet[1].valid && rs_line.T2 == cdb_packet[1].tag) ||
+									(cdb_packet[2].valid && rs_line.T2 == cdb_packet[2].tag)) ? 0 :
+									(rs_line.T2 == mt_packet.T2_plus) ? 0 : rs_line.T2;
 					n_rs_line.busy = 1;                          // busy = 1 before entering exe
 
 

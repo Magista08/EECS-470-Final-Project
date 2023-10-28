@@ -291,7 +291,7 @@ typedef struct packed {
  * Data exchanged from the ID to the EX stage
  */
 typedef struct packed {
-    logic [$clog2(`ROBLEN)-1:0]	T; //ROBID
+    // logic [$clog2(`ROBLEN)-1:0]	T; //ROBID
 
     INST              inst;
     logic [`XLEN-1:0] PC;
@@ -496,6 +496,8 @@ typedef struct packed {
     // Prev
     RS_LINE [2:0] lines;
     */
+    logic [$clog2(`ROBLEN)-1:0]	T;
+
     INST              inst;
     logic [`XLEN-1:0] PC;
     logic [`XLEN-1:0] NPC; // PC + 4

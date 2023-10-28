@@ -19,10 +19,10 @@ module testbench;
             .reset(reset),
             .enable(enable),
             .squash_flag(squash_flag),
-            .mt_rs_in(mt_rs_in),
+            .mt_packet_in(mt_rs_in),
             .dp_packet_in(dp_packet_in),
-            .rob_in(rob_in),
-            .cdb_in(cdb_in),
+            .rob_packet_in(rob_in),
+            .cdb_packet_in(cdb_in),
             
             //output 
             .is_packet_out(is_packet_out),
@@ -35,8 +35,8 @@ module testbench;
     end    
 
     initial begin
-	    $monitor("is_packet_out[0].inst: %h  is_packet_out[1].inst: %h  is_packet_out[2].inst: %h  dp_packet_out[0].empty_num: %b  dp_packet_out[1].empty_num: %b  dp_packet_out[2].empty_num: %b",
-                 is_packet_out[0].inst, is_packet_out[1].inst, is_packet_out[2].inst, dp_packet_out[0].empty_num, dp_packet_out[1].empty_num, dp_packet_out[2].empty_num);
+	            $monitor("is_packet_out[0].inst: %h  is_packet_out[1].inst: %h  is_packet_out[2].inst: %h  dp_packet_out.empty_num: %b",
+                 is_packet_out[0].inst, is_packet_out[1].inst, is_packet_out[2].inst, dp_packet_out.empty_num);
         clock   = 0;
         reset   = 1;
         enable  = 1;
