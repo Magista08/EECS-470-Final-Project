@@ -54,5 +54,8 @@ output/
 # Backup Files
 *.bak*
 
+# tar files
+*.tgz
+
 # Python File
 *.py
