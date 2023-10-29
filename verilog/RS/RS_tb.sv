@@ -32,7 +32,69 @@ module testbench;
     always begin
         #10;
         clock = ~clock;
-    end    
+    end
+	
+	// Task to clear the input
+	
+	task clear_input;
+		output ROB_RS_PACKET dp_packet_in;
+		output CDB_RS_PACKET cdb_in;
+		output ROB_RS_PACKET rob_in;
+		output MT_RS_PACKET  mt_rs_in;
+		
+		begin 
+			for(integer a = 0; k <= 2;k ++) begin
+					dp_packet_in[k]  = {
+						`NOP,             //NOP
+						{`XLEN{1'b0}},    // PC + 4
+						{`XLEN{1'b0}},     // PC
+
+						{`XLEN{1'b0}},    // reg A value 
+						{`XLEN{1'b0}},    // reg B value
+
+						OPA_IS_RS1,     // ALU opa mux select (ALU_OPA_xxx *)
+						OPB_IS_RS2,     // ALU opb mux select (ALU_OPB_xxx *)
+
+						`ZERO_REG,    // destination (writeback) register index
+						ALU_ADD,     // ALU function select (ALU_xxx *)
+						1'b0,    //rd_mem
+						1'b0,    //wr_mem
+						1'b0,    //cond
+						1'b0,    //uncond
+						1'b0,    //halt
+						1'b0,    //illegal
+						1'b0,    //csr_op
+						1'b1,    //valid
+						1'b0,    //rs1_inst
+						1'b0     //rs2_inst
+					};
+
+					mt_rs_in[k]      = {
+						{$clog2(`ROBLEN){1'b0}},
+						{$clog2(`ROBLEN){1'b0}},
+						1'b0,
+						1'b0,
+						1'b0,
+						1'b0
+					};
+
+					rob_in[k]        = {
+						{`XLEN{1'b0}},
+						{`XLEN{1'b0}},
+						{$clog2(`ROBLEN){1'b0}},
+						1'b0,
+						1'b0
+					};
+					cdb_in[k]        = {
+						{`XLEN{1'b0}},
+						{$clog2(`ROBLEN){1'b0}},
+						1'b0
+					};
+			end
+		end
+	endtask
+	
+	
 
     initial begin
 	    // $monitor("time:%4.0f  clock:%b  is_packet_out[0].inst:%h  is_packet_out[1].inst:%h  is_packet_out[2].inst:%h  dp_packet_out.empty_num:%h  is_packet_out[0].T: %h  is_packet_out[1].T: %h  is_packet_out[2].T: %h",
@@ -333,10 +395,12 @@ module testbench;
                     dp_packet_in[0].inst,dp_packet_in[1].inst,dp_packet_in[2].inst );
         
             @(negedge clock);
-            @(negedge clock);
-            @(negedge clock);
-            @(negedge clock);
-            @(negedge clock);
+			clear_input(
+				dp_packet_in,
+				cdb_in,
+				rob_in,
+				mt_rs_in
+		    );
             @(negedge clock);
 
         /////////////////////////////////////////////////////////////////////////
@@ -481,10 +545,12 @@ module testbench;
             };
 
             @(negedge clock);
-            @(negedge clock);
-            @(negedge clock);
-            @(negedge clock);
-            @(negedge clock);
+			clear_input(
+				dp_packet_in,
+				cdb_in,
+				rob_in,
+				mt_rs_in
+		    );
             @(negedge clock);
 
         	
@@ -548,10 +614,12 @@ module testbench;
                     dp_packet_in[0].inst,dp_packet_in[1].inst,dp_packet_in[2].inst );
         
             @(negedge clock);
-            @(negedge clock);
-            @(negedge clock);
-            @(negedge clock);
-            @(negedge clock);
+			clear_input(
+				dp_packet_in,
+				cdb_in,
+				rob_in,
+				mt_rs_in
+		    );
             @(negedge clock);
 
         $display("Test complete! \n ");    
@@ -561,5 +629,3 @@ module testbench;
 
 
 endmodule
-
-

@@ -10,7 +10,7 @@ module RS_ONE_LINE (
     input             	       clock, reset, enable,
     input 	 				   clear,             // whether clear the RS_line
     // input  					   squash_flag,
-    input [$clog2(`ROBLEN)-1:0]line_id,
+    input [$clog2(`ROBLEN)-1:0]line_id,    // line_id will not be cleared when clear and reset, remain unchanged
     // input					sel,
     input DP_IS_PACKET 		   dp_packet,
     input MT_RS_PACKET  	   mt_packet,
@@ -21,14 +21,15 @@ module RS_ONE_LINE (
 	input [$clog2(`ROBLEN)-1:0] other_T1,
 	input [$clog2(`ROBLEN)-1:0] other_T2,
 	// the other 2 insts (in order)
-	input  						other_dest_reg1,
-	input  						other_dest_reg2,
+	input [4:0] 				other_dest_reg1,
+	input [4:0]					other_dest_reg2,
 	// position
 	input [1:0] 				my_position,
 
 	// OUTPUT
 	output logic  			not_ready,
-    output RS_LINE  		rs_line
+    output RS_LINE  		rs_line,
+	output logic            out_busy
 );
     RS_LINE  				n_rs_line;
     logic 					valid_flag1;
@@ -55,6 +56,7 @@ module RS_ONE_LINE (
 	在last cycle中，R3对应的mt中带有+, 但在这个cycle中，由于RAW，直
 	接对比mt_tag和rs_tag可能会出问题
 	*/
+	assign out_busy = n_rs_line.busy;
 
     always_comb begin
 		//not_ready = ~(valid_flag1 && valid_flag2 && ~empty);
@@ -62,7 +64,7 @@ module RS_ONE_LINE (
 		// Clear the RS line(n_rs_line)
 		if(clear || reset) begin // add reset
 			n_rs_line = '{
-				{$clog2(`RSLEN){1'b0}},  // RSID
+				line_id,  				 // RSID
 				`NOP,             		 // inst
 				1'b0,				  	 // busy
 				{$clog2(`ROBLEN){1'b0}}, // T
@@ -106,12 +108,12 @@ module RS_ONE_LINE (
 					if (my_position == 2'b00) begin
 						n_rs_line.T1 = valid_flag1? 0:mt_packet.T1;
 					end else if (my_position == 2'b01) begin
-						n_rs_line.T1 = (dp_packet.rs1_instruction && dp_packet.inst.r.rs1 == other_dest_reg1 && ~other_dest_reg1)? other_T1:
+						n_rs_line.T1 = (dp_packet.rs1_instruction && dp_packet.inst.r.rs1 == other_dest_reg1 && other_dest_reg1 != `ZERO_REG)? other_T1:
 									    valid_flag1? 0:
 										mt_packet.T1;
 					end else begin
-						n_rs_line.T1 = (dp_packet.rs1_instruction && dp_packet.inst.r.rs1 == other_dest_reg2 && ~other_dest_reg2)? other_T2:
-									   (dp_packet.rs1_instruction && dp_packet.inst.r.rs1 == other_dest_reg1 && ~other_dest_reg1)? other_T1:
+						n_rs_line.T1 = (dp_packet.rs1_instruction && dp_packet.inst.r.rs1 == other_dest_reg2 && other_dest_reg2 != `ZERO_REG)? other_T2:
+									   (dp_packet.rs1_instruction && dp_packet.inst.r.rs1 == other_dest_reg1 && other_dest_reg1 != ZERO_REG)? other_T1:
 									   	valid_flag1? 0:
 										mt_packet.T1;
 					end
@@ -119,21 +121,17 @@ module RS_ONE_LINE (
 					if (my_position == 2'b00) begin
 						n_rs_line.T2 = valid_flag2? 0:mt_packet.T2;
 					end else if (my_position == 2'b01) begin
-						n_rs_line.T2 = (dp_packet.rs2_instruction && dp_packet.inst.r.rs2 == other_dest_reg1 && ~other_dest_reg1)? other_T1:
+						n_rs_line.T2 = (dp_packet.rs2_instruction && dp_packet.inst.r.rs2 == other_dest_reg1 && other_dest_reg1 != `ZERO_REG)? other_T1:
 									    valid_flag2? 0:
 										mt_packet.T2;
 					end else begin
-						n_rs_line.T2 = (dp_packet.rs2_instruction && dp_packet.inst.r.rs2 == other_dest_reg2 && ~other_dest_reg2)? other_T2:
+						n_rs_line.T2 = (dp_packet.rs2_instruction && dp_packet.inst.r.rs2 == other_dest_reg2 && other_dest_reg2 != `ZERO_REG)? other_T2:
 									   (dp_packet.rs2_instruction && dp_packet.inst.r.rs2 == other_dest_reg1 && ~other_dest_reg1)? other_T1:
 									   	valid_flag2? 0:
 										mt_packet.T2;
 					end 
 
-
-
-
 					n_rs_line.busy = 1;                          // busy = 1 when enable
-
 
 					// data from ROB, CDB, Regfile
 					n_rs_line.V1 = (cdb_packet[0].valid && mt_packet.T1 == cdb_packet[0].tag)? cdb_packet[0].value:
@@ -179,7 +177,7 @@ module RS_ONE_LINE (
 				// inst == NOP condition
 				end else begin
 					n_rs_line = '{
-						{$clog2(`RSLEN){1'b0}},  // RSID
+						line_id,  				 // RSID
 						`NOP,             		 // inst
 						1'b0,				  	 // busy
 						{$clog2(`ROBLEN){1'b0}}, // T
@@ -212,7 +210,7 @@ module RS_ONE_LINE (
 				// RS_line unfilled 
 				if (!rs_line.busy) begin
 					n_rs_line = '{
-						{$clog2(`RSLEN){1'b0}},  // RSID
+						line_id, 				 // RSID
 						`NOP,             		 // inst
 						1'b0,				  	 // busy
 						{$clog2(`ROBLEN){1'b0}}, // T
@@ -304,7 +302,7 @@ module RS_ONE_LINE (
     always_ff @(posedge clock) begin
         if (reset || clear) begin  // if empty=0，rs_line stalls
 			rs_line <= '{
-				{$clog2(`RSLEN){1'b0}},  // RSID
+				line_id,				 // RSID
 				`NOP,             		 // inst
 				1'b0,				  	 // busy
 				{$clog2(`ROBLEN){1'b0}}, // T

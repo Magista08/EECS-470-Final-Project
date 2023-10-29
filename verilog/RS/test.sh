@@ -17,6 +17,7 @@ if [ $TEST_MODE -eq 1 ]; then
     sed -i "s/RS_tb.sv/RS_LINE_test.sv/g" Makefile
 
     # Run the test
+    make clean
     make sim
     
 else
@@ -30,5 +31,6 @@ else
     sed -i "s/RS_LINE_test.sv/RS_tb.sv/g" Makefile
 
     # Run the test
+    make clean
     make sim
 fi

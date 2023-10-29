@@ -61,7 +61,7 @@ module RS (
     //logic [$clog2(3)-1:0] temp_is_packet_count;
     logic       [`RSLEN-1:0]    not_ready;
     logic [2:0] [`RSLEN-1:0]    rs_is_posi;
-    logic [$clog2(`RSLEN)-1:0]  posi;
+    logic [2:0] [$clog2(`RSLEN)-1:0]  posi;
     logic [`RSLEN-1:0]          read_inst_sig;
 
 
@@ -71,6 +71,8 @@ module RS (
     //INST                    	other_inst2;
     logic [`RSLEN-1:0] [4:0]                 other_dest_reg1;
     logic [`RSLEN-1:0] [4:0]                 other_dest_reg2;
+    logic [$clog2(`RSLEN)-1:0] count;
+    logic [`RSLEN-1:0]                 out_busy;
 
     
     // Record the final destination
@@ -123,12 +125,13 @@ module RS (
                 .other_dest_reg1(other_dest_reg1[i]),
                 .other_dest_reg2(other_dest_reg2[i]),
                 .my_position(sel_buffer[i]),
+                .out_busy(out_busy[i]),
                 
                 //output
                 .not_ready(not_ready[i]),
-                .rs_line(rs_table[i])
-            );
-                       
+                .rs_line(rs_table[i]),
+                .out_busy(out_busy[i])
+            );  
 	    
         end
     endgenerate
@@ -156,14 +159,16 @@ module RS (
         clear_signal <= {`RSLEN{squash_flag}};
         
         // Send to IS
-        // $display("not_ready = %b", not_ready);
+        $display("out_busy = %b", out_busy);
+        $display("count = %d", count);
+        $display("not_ready = %b", not_ready);
         for (int i=0; i<3; i++) begin
             // FU detect hazard
 
             // Packet out
             
-            if ($clog2(rs_is_posi[i]) == 0) begin
-                
+            if (rs_is_posi[i] == 0) begin
+                posi[i] <= 0;
                 is_packet_out[i] <={
                     {$clog2(`ROBLEN){1'b0}}, // T
                     `NOP,                    // inst
@@ -190,31 +195,32 @@ module RS (
                 };
                 //clear_signal[posi] <= squash_flag;
             end else begin
-                posi <= $clog2(rs_is_posi[i]); 
-                // $display("posi = %d", posi);
-                is_packet_out[i].T             <= rs_table[posi].T;
-                is_packet_out[i].inst          <= rs_table[posi].inst;
-                is_packet_out[i].PC            <= rs_table[posi].PC;
-                is_packet_out[i].NPC           <= rs_table[posi].NPC;
+                posi[i] <= $clog2(rs_is_posi[i]); 
+                 $display("posi = %d", posi[i]);
+                 $display(i);
+                is_packet_out[i].T             <= rs_table[posi[i]].T;
+                is_packet_out[i].inst          <= rs_table[posi[i]].inst;
+                is_packet_out[i].PC            <= rs_table[posi[i]].PC;
+                is_packet_out[i].NPC           <= rs_table[posi[i]].NPC;
 
-                is_packet_out[i].rs1_value     <= rs_table[posi].V1;
-                is_packet_out[i].rs2_value     <= rs_table[posi].V2;
+                is_packet_out[i].rs1_value     <= rs_table[posi[i]].V1;
+                is_packet_out[i].rs2_value     <= rs_table[posi[i]].V2;
 
-                is_packet_out[i].opa_select    <= rs_table[posi].opa_select;
-                is_packet_out[i].opb_select    <= rs_table[posi].opb_select;
-                is_packet_out[i].dest_reg_idx  <= rs_table[posi].dest_reg_idx;
-                is_packet_out[i].alu_func      <= rs_table[posi].alu_func;
-                is_packet_out[i].rd_mem        <= rs_table[posi].rd_mem;
-                is_packet_out[i].wr_mem        <= rs_table[posi].wr_mem;
-                is_packet_out[i].cond_branch   <= rs_table[posi].cond_branch;
-                is_packet_out[i].uncond_branch <= rs_table[posi].uncond_branch;
-                is_packet_out[i].halt          <= rs_table[posi].halt;
-                is_packet_out[i].illegal       <= rs_table[posi].illegal;
-                is_packet_out[i].csr_op        <= rs_table[posi].csr_op;
-                is_packet_out[i].valid         <= rs_table[posi].valid;
+                is_packet_out[i].opa_select    <= rs_table[posi[i]].opa_select;
+                is_packet_out[i].opb_select    <= rs_table[posi[i]].opb_select;
+                is_packet_out[i].dest_reg_idx  <= rs_table[posi[i]].dest_reg_idx;
+                is_packet_out[i].alu_func      <= rs_table[posi[i]].alu_func;
+                is_packet_out[i].rd_mem        <= rs_table[posi[i]].rd_mem;
+                is_packet_out[i].wr_mem        <= rs_table[posi[i]].wr_mem;
+                is_packet_out[i].cond_branch   <= rs_table[posi[i]].cond_branch;
+                is_packet_out[i].uncond_branch <= rs_table[posi[i]].uncond_branch;
+                is_packet_out[i].halt          <= rs_table[posi[i]].halt;
+                is_packet_out[i].illegal       <= rs_table[posi[i]].illegal;
+                is_packet_out[i].csr_op        <= rs_table[posi[i]].csr_op;
+                is_packet_out[i].valid         <= rs_table[posi[i]].valid;
 
                 // Pass the signal that this line is emptied
-                clear_signal[posi] <= 1'b1;
+                clear_signal[posi[i]] <= 1'b1;
             end
         end
         
@@ -270,11 +276,10 @@ module RS (
         assign emptied_lines[j] = rs_table[j].busy ? 1'b1 : 1'b0;
     end
 
-    logic [$clog2(`RSLEN)-1:0] count;
     always_comb begin
         count = 0;
         for (int k = 0; k < `RSLEN; k++) begin
-                if (~rs_table[k].busy) begin
+                if (~out_busy[k]) begin
                 count = count + 1;
                 end
         end
