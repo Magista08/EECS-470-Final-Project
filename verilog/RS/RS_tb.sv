@@ -44,7 +44,7 @@ module testbench;
 		
 		begin 
 			for(integer a = 0; a <= 2; a++) begin
-					dp_packet_in[k]  = {
+					dp_packet_in[a]  = {
 						`NOP,             //NOP
 						{`XLEN{1'b0}},    // PC + 4
 						{`XLEN{1'b0}},     // PC
@@ -69,7 +69,7 @@ module testbench;
 						1'b0     //rs2_inst
 					};
 
-					mt_rs_in[k]      = {
+					mt_rs_in[a]      = {
 						{$clog2(`ROBLEN){1'b0}},
 						{$clog2(`ROBLEN){1'b0}},
 						1'b0,
@@ -78,14 +78,14 @@ module testbench;
 						1'b0
 					};
 
-					rob_in[k]        = {
+					rob_in[a]        = {
 						{`XLEN{1'b0}},
 						{`XLEN{1'b0}},
 						{$clog2(`ROBLEN){1'b0}},
 						1'b0,
 						1'b0
 					};
-					cdb_in[k]        = {
+					cdb_in[a]        = {
 						{`XLEN{1'b0}},
 						{$clog2(`ROBLEN){1'b0}},
 						1'b0
