@@ -4,7 +4,7 @@
 */
 `include "../sys_defs.svh"
 
-module RS_LINE (
+module RS_ONE_LINE (
 	// INPUT
 
     input             	       clock, reset, enable,
@@ -127,7 +127,7 @@ module RS_LINE (
 									   (dp_packet.rs2_instruction && dp_packet.inst.r.rs2 == other_dest_reg1 && ~other_dest_reg1)? other_T1:
 									   	valid_flag2? 0:
 										mt_packet.T2;
-					end
+					end 
 
 
 
@@ -179,30 +179,30 @@ module RS_LINE (
 				// inst == NOP condition
 				end else begin
 					n_rs_line = '{
-						0,                // RSID
-						`NOP,             // inst
-						0,				  // busy
-						0,                // T
-						0,                // T1
-						0,				  // T2
-						0,			      // valid1
-						0,                // valid2
-						0,                // V1
-						0,                // V2
-						0,                // PC
-						0,				  // NPC
-						OPA_IS_RS1,       // opa_select
-						OPB_IS_RS2,       // opb_select
-						`ZERO_REG,        // dest_reg_idx
-						ALU_ADD,          // alu_func
-						0,				  // rd_mem
-						0,				  // wr_mem
-						0,				  // cond_branch
-						0,                // uncond_branch
-						0,				  // halt
-						0,			      // illegal
-						0,				  // csr_op
-						0				  // valid
+						{$clog2(`RSLEN){1'b0}},  // RSID
+						`NOP,             		 // inst
+						1'b0,				  	 // busy
+						{$clog2(`ROBLEN){1'b0}}, // T
+						{$clog2(`ROBLEN){1'b0}}, // T1
+						{$clog2(`ROBLEN){1'b0}}, // T2
+						1'b0,			     	 // valid1
+						1'b0,             		 // valid2
+						{`XLEN{1'b0}},           // V1
+						{`XLEN{1'b0}},           // V2
+						{`XLEN{1'b0}},           // PC
+						{`XLEN{1'b0}},			 // NPC
+						OPA_IS_RS1,       		 // opa_select
+						OPB_IS_RS2,       		 // opb_select
+						`ZERO_REG,       		 // dest_reg_idx
+						ALU_ADD,         		 // alu_func
+						1'b0,				     // rd_mem
+						1'b0,				     // wr_mem
+						1'b0,				     // cond_branch
+						1'b0,                    // uncond_branch
+						1'b0,				     // halt
+						1'b0,			         // illegal
+						1'b0,				     // csr_op
+						1'b0				     // valid
 					};
 					not_ready = 1;
 				end
@@ -212,30 +212,30 @@ module RS_LINE (
 				// RS_line unfilled 
 				if (!rs_line.busy) begin
 					n_rs_line = '{
-						0,                // RSID
-						`NOP,             // inst
-						0,				  // busy
-						0,                // T
-						0,                // T1
-						0,				  // T2
-						0,			      // valid1
-						0,                // valid2
-						0,                // V1
-						0,                // V2
-						0,                // PC
-						0,				  // NPC
-						OPA_IS_RS1,       // opa_select
-						OPB_IS_RS2,       // opb_select
-						`ZERO_REG,        // dest_reg_idx
-						ALU_ADD,          // alu_func
-						0,				  // rd_mem
-						0,				  // wr_mem
-						0,				  // cond_branch
-						0,                // uncond_branch
-						0,				  // halt
-						0,			      // illegal
-						0,				  // csr_op
-						0				  // valid
+						{$clog2(`RSLEN){1'b0}},  // RSID
+						`NOP,             		 // inst
+						1'b0,				  	 // busy
+						{$clog2(`ROBLEN){1'b0}}, // T
+						{$clog2(`ROBLEN){1'b0}}, // T1
+						{$clog2(`ROBLEN){1'b0}}, // T2
+						1'b0,			     	 // valid1
+						1'b0,             		 // valid2
+						{`XLEN{1'b0}},           // V1
+						{`XLEN{1'b0}},           // V2
+						{`XLEN{1'b0}},           // PC
+						{`XLEN{1'b0}},			 // NPC
+						OPA_IS_RS1,       		 // opa_select
+						OPB_IS_RS2,       		 // opb_select
+						`ZERO_REG,       		 // dest_reg_idx
+						ALU_ADD,         		 // alu_func
+						1'b0,				     // rd_mem
+						1'b0,				     // wr_mem
+						1'b0,				     // cond_branch
+						1'b0,                    // uncond_branch
+						1'b0,				     // halt
+						1'b0,			         // illegal
+						1'b0,				     // csr_op
+						1'b0				     // valid
 					};
 					not_ready = 1;
 				// RS_line filled (busy = 1)
@@ -304,60 +304,60 @@ module RS_LINE (
     always_ff @(posedge clock) begin
         if (reset || squash_flag) begin  // if empty=0，rs_line stalls
 			rs_line <= '{
-				0,                // RSID
-				`NOP,             // inst
-				0,				  // busy
-				0,                // T
-				0,                // T1
-				0,				  // T2
-				0,			      // valid1
-				0,                // valid2
-				0,                // V1
-				0,                // V2
-				0,                // PC
-				0,				  // NPC
-				OPA_IS_RS1,       // opa_select
-				OPB_IS_RS2,       // opb_select
-				`ZERO_REG,        // dest_reg_idx
-				ALU_ADD,          // alu_func
-				0,				  // rd_mem
-				0,				  // wr_mem
-				0,				  // cond_branch
-				0,                // uncond_branch
-				0,				  // halt
-				0,			      // illegal
-				0,				  // csr_op
-				0				  // valid
+				{$clog2(`RSLEN){1'b0}},  // RSID
+				`NOP,             		 // inst
+				1'b0,				  	 // busy
+				{$clog2(`ROBLEN){1'b0}}, // T
+				{$clog2(`ROBLEN){1'b0}}, // T1
+				{$clog2(`ROBLEN){1'b0}}, // T2
+				1'b0,			     	 // valid1
+				1'b0,             		 // valid2
+				{`XLEN{1'b0}},           // V1
+				{`XLEN{1'b0}},           // V2
+				{`XLEN{1'b0}},           // PC
+				{`XLEN{1'b0}},			 // NPC
+				OPA_IS_RS1,       		 // opa_select
+				OPB_IS_RS2,       		 // opb_select
+				`ZERO_REG,       		 // dest_reg_idx
+				ALU_ADD,         		 // alu_func
+				1'b0,				     // rd_mem
+				1'b0,				     // wr_mem
+				1'b0,				     // cond_branch
+				1'b0,                    // uncond_branch
+				1'b0,				     // halt
+				1'b0,			         // illegal
+				1'b0,				     // csr_op
+				1'b0				     // valid
 			};
 
 		end else if(enable) begin
 			rs_line <= n_rs_line;
 		end else begin
 			rs_line <= '{
-				0,                // RSID
-				`NOP,             // inst
-				0,				  // busy
-				0,                // T
-				0,                // T1
-				0,				  // T2
-				0,			      // valid1
-				0,                // valid2
-				0,                // V1
-				0,                // V2
-				0,                // PC
-				0,				  // NPC
-				OPA_IS_RS1,       // opa_select
-				OPB_IS_RS2,       // opb_select
-				`ZERO_REG,        // dest_reg_idx
-				ALU_ADD,          // alu_func
-				0,				  // rd_mem
-				0,				  // wr_mem
-				0,				  // cond_branch
-				0,                // uncond_branch
-				0,				  // halt
-				0,			      // illegal
-				0,				  // csr_op
-				0				  // valid
+				{$clog2(`RSLEN){1'b0}},  // RSID
+				`NOP,             		 // inst
+				1'b0,				  	 // busy
+				{$clog2(`ROBLEN){1'b0}}, // T
+				{$clog2(`ROBLEN){1'b0}}, // T1
+				{$clog2(`ROBLEN){1'b0}}, // T2
+				1'b0,			     	 // valid1
+				1'b0,             		 // valid2
+				{`XLEN{1'b0}},           // V1
+				{`XLEN{1'b0}},           // V2
+				{`XLEN{1'b0}},           // PC
+				{`XLEN{1'b0}},			 // NPC
+				OPA_IS_RS1,       		 // opa_select
+				OPB_IS_RS2,       		 // opb_select
+				`ZERO_REG,       		 // dest_reg_idx
+				ALU_ADD,         		 // alu_func
+				1'b0,				     // rd_mem
+				1'b0,				     // wr_mem
+				1'b0,				     // cond_branch
+				1'b0,                    // uncond_branch
+				1'b0,				     // halt
+				1'b0,			         // illegal
+				1'b0,				     // csr_op
+				1'b0				     // valid
 			};
 		end
 	end

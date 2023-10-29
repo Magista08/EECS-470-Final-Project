@@ -52,4 +52,7 @@ output/
 !correct_out/*
 
 # Backup Files
-*.bak
+*.bak*
+
+# Python File
+*.py

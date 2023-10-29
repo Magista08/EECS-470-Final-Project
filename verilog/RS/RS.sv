@@ -107,7 +107,7 @@ module RS (
 
             // One Line Change
             
-            RS_LINE RSL(
+            RS_ONE_LINE RSL(
                 //input
                 .clock(clock),
                 .reset(reset),
@@ -121,11 +121,9 @@ module RS (
                 .cdb_packet(cdb_packet),
                 .other_T1(other_T1[i]),
                 .other_T2(other_T2[i]),
-                //.other_inst1(other_inst1),
-                //.other_inst2(other_inst2),
                 .other_dest_reg1(other_dest_reg1[i]),
                 .other_dest_reg2(other_dest_reg2[i]),
-                .my_position(sel_buffer[i]%3),
+                .my_position(sel_buffer[i]),
                 
                 //output
                 .not_ready(not_ready[i]),

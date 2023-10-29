@@ -68,8 +68,8 @@ SOURCES     = RS.sv
 HEADERS	    = ../sys_defs.svh \
 			  ../ISA.svh 
 SYNTH_FILES = RS.vg # P1 NOTE: synthesis is not tested in project 1
-CHILD_MODULES = RS_LINE
-CHILD_SOURCE = RS_LINE.sv
+CHILD_MODULES = RS_ONE_LINE
+CHILD_SOURCE = RS_ONE_LINE.sv
 # the .vg rule is automatically generated below when the name of the file matches its top level module
 # P1 NOTE: this doesn't work for ps4-assign.sv and ps4-if_else.sv, but you don't need synthesis for P1
 
