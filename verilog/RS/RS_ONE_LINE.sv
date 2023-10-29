@@ -9,7 +9,7 @@ module RS_ONE_LINE (
 
     input             	       clock, reset, enable,
     input 	 				   clear,             // whether clear the RS_line
-    input  					   squash_flag,
+    // input  					   squash_flag,
     input [$clog2(`ROBLEN)-1:0]line_id,
     // input					sel,
     input DP_IS_PACKET 		   dp_packet,
@@ -302,7 +302,7 @@ module RS_ONE_LINE (
 
 // 决定是否将n_rs_line的值传递给rs_line
     always_ff @(posedge clock) begin
-        if (reset || squash_flag) begin  // if empty=0，rs_line stalls
+        if (reset || clear) begin  // if empty=0，rs_line stalls
 			rs_line <= '{
 				{$clog2(`RSLEN){1'b0}},  // RSID
 				`NOP,             		 // inst

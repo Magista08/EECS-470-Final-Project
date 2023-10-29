@@ -113,7 +113,6 @@ module RS (
                 .reset(reset),
                 .enable(enable && read_inst_sig[i]),
                 .clear(clear_signal[i]),
-                .squash_flag(squash_flag), 
                 .line_id((i)),
                 .dp_packet(dp_packet_in[sel_buffer[i]%3]), 
                 .mt_packet(mt_packet_in[sel_buffer[i]%3]),
@@ -147,27 +146,39 @@ module RS (
     always_ff @(posedge clock) begin
         // Re-init
         //is_packet_count <= 0;
-        clear_signal    <= {`RSLEN{1'b0}};
-
+        /*
+        if(squash_flag) begin
+            clear_signal    <= {`RSLEN{1'b1}};
+        end else begin
+            clear_signal    <= {`RSLEN{1'b0}};
+        end
+        */
+        clear_signal <= {`RSLEN{squash_flag}};
         
         // Send to IS
+        // $display("not_ready = %b", not_ready);
         for (int i=0; i<3; i++) begin
             // FU detect hazard
 
             // Packet out
-            if (rs_is_posi[i] == 0) begin
+            
+            if ($clog2(rs_is_posi[i]) == 0) begin
+                
                 is_packet_out[i] <={
                     {$clog2(`ROBLEN){1'b0}}, // T
                     `NOP,                    // inst
-                    {$clog2(`XLEN){1'b0}},   // RS1_value
-                    {$clog2(`XLEN){1'b0}},   // RS2_value
-                    {$clog2(`XLEN){1'b0}},   // opa_select
-                    {$clog2(`XLEN){1'b0}},   // opb_select
-                    4'b0,                    // dest_reg_idx
+                    {`XLEN{1'b0}},   // PC
+                    {`XLEN{1'b0}},   // NPC
+
+                    {`XLEN{1'b0}},   // RS1_value
+                    {`XLEN{1'b0}},   // RS2_value
+                    
                     OPA_IS_RS1,              // OPA_SELECT
                     OPB_IS_RS2,              // OPB_SELECT
+                    
                     `ZERO_REG,               // dest_reg_idx
                     ALU_ADD,                 // alu_func
+
                     1'b0,                    // rd_mem
                     1'b0,                    // wr_mem
                     1'b0,                    // cond_branch
@@ -177,8 +188,10 @@ module RS (
                     1'b0,                    // csr_op
                     1'b0                     // valid
                 };
+                //clear_signal[posi] <= squash_flag;
             end else begin
                 posi <= $clog2(rs_is_posi[i]); 
+                // $display("posi = %d", posi);
                 is_packet_out[i].T             <= rs_table[posi].T;
                 is_packet_out[i].inst          <= rs_table[posi].inst;
                 is_packet_out[i].PC            <= rs_table[posi].PC;

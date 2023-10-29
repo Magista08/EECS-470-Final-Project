@@ -5,7 +5,6 @@ module testbench;
     logic                           clock, reset, enable;
     logic                           clear;
     logic                           squash_flag;
-    //logic                           sel;
     logic                           other_dest_reg1;
     logic                           other_dest_reg2;
     logic   [$clog2(`ROBLEN)-1:0]   line_id;
@@ -50,8 +49,8 @@ module testbench;
     end
 
     initial begin
-        $monitor("time:%4.0f  clock:%b  not_ready:%b  rs_line:%h",
-                $time, clock, not_ready_out, rs_line_out.RSID);
+        $monitor("time:%4.0f  clock:%b  not_ready:%b  rs_line_ID:%h  rs_line_inst:%h  busy:%h  V1:%h V2:%h",
+                $time, clock, not_ready_out, rs_line_out.RSID, rs_line_out.inst, rs_line_out.busy, rs_line_out.V1, rs_line_out.V2);
         clock   = 0;
         reset   = 1;
         enable  = 1;
@@ -116,10 +115,6 @@ module testbench;
 
         @(negedge clock);
         @(negedge clock);
-        @(negedge clock);
-        @(negedge clock);
-        @(negedge clock);
-        @(negedge clock);
         reset = 0;
 
         /////////////////////////////////////////////////////////////////////////
@@ -129,7 +124,7 @@ module testbench;
         /////////////////////////////////////////////////////////////////////////
 
             dp_packet_in  = {
-                `RV32_ADD,             //NOP
+                32'hdead_face,        // ADD
                 {`XLEN{1'b0}},    // PC + 4
                 {`XLEN{1'b0}},     // PC
 
@@ -139,7 +134,7 @@ module testbench;
                 OPA_IS_RS1,     // ALU opa mux select (ALU_OPA_xxx *)
                 OPB_IS_RS2,     // ALU opb mux select (ALU_OPB_xxx *)
 
-                `ZERO_REG,    // destination (writeback) register index
+                5'b00010,    // destination (writeback) register index
                 ALU_ADD,     // ALU function select (ALU_xxx *)
                 1'b0,    //rd_mem
                 1'b0,    //wr_mem
@@ -149,11 +144,12 @@ module testbench;
                 1'b0,    //illegal
                 1'b0,    //csr_op
                 1'b1,    //valid
-                1'b0,    //rs1_insn
-                1'b0     //rs2_insn
+                1'b1,    //rs1_insn
+                1'b1     //rs2_insn
             };
 
             @(negedge clock);
+			enable = 0;
             @(negedge clock);
             @(negedge clock);
             @(negedge clock);
@@ -163,20 +159,50 @@ module testbench;
         
         /////////////////////////////////////////////////////////////////////////
         //                                                                     //
-        // test 2: Clear the line                                              //
+        // test 2: enable = 0                                                  //
         //                                                                     //
         /////////////////////////////////////////////////////////////////////////
+			 dp_packet_in  = {
+                $random,        // ADD
+                {`XLEN{1'b0}},    // PC + 4
+                {`XLEN{1'b0}},     // PC
 
-            enable = 0;
+                $random,    // reg A value 
+                $random,    // reg B value
+
+                OPA_IS_RS1,     // ALU opa mux select (ALU_OPA_xxx *)
+                OPB_IS_RS2,     // ALU opb mux select (ALU_OPB_xxx *)
+
+                5'b11000,    // destination (writeback) register index
+                ALU_ADD,     // ALU function select (ALU_xxx *)
+                1'b0,    //rd_mem
+                1'b0,    //wr_mem
+                1'b0,    //cond
+                1'b0,    //uncond
+                1'b0,    //halt
+                1'b0,    //illegal
+                1'b0,    //csr_op
+                1'b1,    //valid
+                1'b1,    //rs1_insn
+                1'b1     //rs2_insn
+            };
+            
 
             @(negedge clock);
-            @(negedge clock);
-            @(negedge clock);
-            @(negedge clock);
-            @(negedge clock);
-            @(negedge clock);
-
-
+        /////////////////////////////////////////////////////////////////////////
+        //                                                                     //
+        // test 3: Clear the line                                              //
+        //                                                                     //
+        /////////////////////////////////////////////////////////////////////////
+		clear = 1;
+		@(negedge clock);
+		clear = 0;
+		@(negedge clock);
+		$display("The line has been cleared!");
+		$display("not_ready:%b  rs_line_ID:%h  rs_line_inst:%h  busy:%h  V1:%h V2:%h",
+                not_ready_out, rs_line_out.RSID, rs_line_out.inst, rs_line_out.busy, rs_line_out.V1, rs_line_out.V2);
+	
+	
         $display("Test complete! \n ");    
         $finish;
     end
