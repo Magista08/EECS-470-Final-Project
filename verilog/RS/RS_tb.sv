@@ -35,8 +35,8 @@ module testbench;
     end    
 
     initial begin
-	    $monitor("time:%4.0f  clock:%b  is_packet_out[0].inst:%h  is_packet_out[1].inst:%h  is_packet_out[2].inst:%h  dp_packet_out.empty_num:%b",
-                 $time, clock, is_packet_out[0].inst, is_packet_out[1].inst, is_packet_out[2].inst, dp_packet_out.empty_num);
+	    $monitor("time:%4.0f  clock:%b  is_packet_out[0].inst:%h  is_packet_out[1].inst:%h  is_packet_out[2].inst:%h  dp_packet_out.empty_num:%h  is_packet_out[0].T: %h  is_packet_out[1].T: %h  is_packet_out[2].T: %h",
+                 $time, clock, is_packet_out[0].inst, is_packet_out[1].inst, is_packet_out[2].inst, dp_packet_out.empty_num, is_packet_out[0].T, is_packet_out[1].T, is_packet_out[2].T);
         clock   = 0;
         reset   = 1;
         enable  = 1;
@@ -191,17 +191,23 @@ module testbench;
             cdb_in[2].value = {`XLEN{1'b0}};
             cdb_in[2].valid = 0;
 
+            $display("dp_packet_in[0].inst:%h,\n dp_packet_in[1].inst:%h,\n dp_packet_in[2].insn:%h\n\n", 
+                    dp_packet_in[0].inst,dp_packet_in[1].inst,dp_packet_in[2].inst );
+
+            @(negedge clock);
+            @(negedge clock);
+            @(negedge clock);
+            @(negedge clock);
+            @(negedge clock);
+            @(negedge clock);
+            reset = 0;
 
         /////////////////////////////////////////////////////////////////////////
         //                                                                     //
         // test 1: 3 NOP                                                       //
         //                                                                     //
         /////////////////////////////////////////////////////////////////////////
-            @(negedge clock);
-            @(negedge clock);
-            @(negedge clock);
-            $display("Test 1: NOP + NOP + NOP  c1");
-            reset = 0;
+
             for(integer k = 0; k <= 2;k ++) begin
                 dp_packet_in[k]  = {
                     `NOP,             //NOP
@@ -224,8 +230,8 @@ module testbench;
                     1'b0,    //illegal
                     1'b0,    //csr_op
                     1'b1,    //valid
-                    1'b0,    //rs1_insn
-                    1'b0     //rs2_insn
+                    1'b0,    //rs1_inst
+                    1'b0     //rs2_inst
                 };
 
                 mt_rs_in[k]      = {
@@ -251,21 +257,25 @@ module testbench;
                 };
             end
 
+            $display("\ntime:   0  clock:0  dp_packet_in[0].inst:%h, dp_packet_in[1].inst:%h, dp_packet_in[2].intn:%h", 
+                    dp_packet_in[0].inst,dp_packet_in[1].inst,dp_packet_in[2].inst );
+
+            @(negedge clock);
+            @(negedge clock);
+            @(negedge clock);
+            @(negedge clock);
+            @(negedge clock);
+            @(negedge clock);
+
+           
+
 
         /////////////////////////////////////////////////////////////////////////
         //                                                                     //
         // test 2: 3 ADD                                                       //
         //                                                                     //
         /////////////////////////////////////////////////////////////////////////
-            @(negedge clock);
-            @(negedge clock);
-            @(negedge clock);
-            // reset = 1;
-            @(negedge clock);
-            @(negedge clock);
-            @(negedge clock);
-            $display("Test 2: ADD + ADD +ADD  c1");
-            reset = 0;
+
             for(integer k = 0; k <= 2;k ++) begin
                 dp_packet_in[k]  = {
                     `RV32_ADD,        //ADD
@@ -316,24 +326,24 @@ module testbench;
                 };
             end
 
+            $display("dp_packet_in[0].inst:%h, dp_packet_in[1].inst:%h, dp_packet_in[2].inst:%h", 
+                    dp_packet_in[0].inst,dp_packet_in[1].inst,dp_packet_in[2].inst );
+        
+            @(negedge clock);
+            @(negedge clock);
+            @(negedge clock);
+            @(negedge clock);
+            @(negedge clock);
+            @(negedge clock);
 
         /////////////////////////////////////////////////////////////////////////
         //                                                                     //
         // test 3: ADD + NOP +ADD                                              //
         //                                                                     //
         /////////////////////////////////////////////////////////////////////////
-            @(negedge clock);
-            
-            @(negedge clock);
-            @(negedge clock);
-            // reset = 1;
-            @(negedge clock);
-            @(negedge clock);
-            @(negedge clock);
-            reset = 0;
-            $display("Test 3: ADD + NOP +ADD  c1");
+
             dp_packet_in[0]  = {
-                `RV32_ADDI,        //ADD
+                `RV32_ADD,        //ADD
                 {`XLEN{1'b0}},    // PC + 4
                 {`XLEN{1'b0}},     // PC
 
@@ -423,7 +433,7 @@ module testbench;
             };
 
             dp_packet_in[2]  = {
-                `RV32_ADDI,        //ADD
+                `RV32_ADD,        //ADD
                 {`XLEN{1'b0}},    // PC + 4
                 {`XLEN{1'b0}},     // PC
 
@@ -466,10 +476,14 @@ module testbench;
                 {$clog2(`ROBLEN){1'b0}},
                 1'b0
             };
-        @(negedge clock);
-        
-        @(negedge clock);
-        @(negedge clock);
+
+            @(negedge clock);
+            @(negedge clock);
+            @(negedge clock);
+            @(negedge clock);
+            @(negedge clock);
+            @(negedge clock);
+
 
         $display("Test complete! \n ");    
         $finish;

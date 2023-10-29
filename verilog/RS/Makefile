@@ -62,22 +62,22 @@ TCL_SCRIPT = synth/470synth.tcl
 # P1 TODO: change TESTBENCH and SOURCES to match your current modules
 # options for SOURCES:   ps4-assign.sv, ps4-if_else.sv | ps8.sv     | rps4.sv
 # options for TESTBENCH: ps4_test.sv                   | ps8_test.sv| rps4_test.sv
-TESTBENCH   = RS_tb.sv
+TESTBENCH   = RS_LINE_test.sv
 			  
-SOURCES     = RS.sv 
+SOURCES     = RS_ONE_LINE.sv 
 HEADERS	    = ../sys_defs.svh \
 			  ../ISA.svh 
 SYNTH_FILES = RS.vg # P1 NOTE: synthesis is not tested in project 1
-CHILD_MODULES = RS_ONE_LINE
-CHILD_SOURCE = RS_ONE_LINE.sv
+# CHILD_MODULES = RS_ONE_LINE
+# CHILD_SOURCE = RS_ONE_LINE.sv
 # the .vg rule is automatically generated below when the name of the file matches its top level module
 # P1 NOTE: this doesn't work for ps4-assign.sv and ps4-if_else.sv, but you don't need synthesis for P1
 
 # the normal simulation executable will run your testbench on the original modules
-simv: $(TESTBENCH) $(CHILD_SOURCE) $(SOURCES) $(HEADERS)
+simv: $(TESTBENCH) $(SOURCES) $(HEADERS)
 	@$(call PRINT_COLOR, 5, compiling the simulation executable $@)
 	@$(call PRINT_COLOR, 3, NOTE: if this is slow to startup: run '"module load vcs verdi synopsys-synth"')
-	$(VCS) $(TESTBENCH) $(CHILD_SOURCE) $(SOURCES) -o $@
+	$(VCS) $(TESTBENCH)  $(SOURCES) -o $@
 	@$(call PRINT_COLOR, 6, finished compiling $@)
 # NOTE: we reference variables with $(VARIABLE), and can make use of the automatic variables: ^, @, <, etc
 # see: https://www.gnu.org/software/make/manual/html_node/Automatic-Variables.html for explanations

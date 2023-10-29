@@ -1,0 +1,184 @@
+`include "../sys_defs.svh"
+`include "../ISA.svh"
+
+module testbench;
+    logic                           clock, reset, enable;
+    logic                           clear;
+    logic                           squash_flag;
+    //logic                           sel;
+    logic                           other_dest_reg1;
+    logic                           other_dest_reg2;
+    logic   [$clog2(`ROBLEN)-1:0]   line_id;
+    logic   [$clog2(`ROBLEN)-1:0]   other_T1;
+    logic   [$clog2(`ROBLEN)-1:0]   other_T2;
+    logic           [1:0]           my_position;
+    DP_IS_PACKET 		            dp_packet_in;
+    MT_RS_PACKET  	                mt_packet_in;
+    ROB_RS_PACKET		            rob_packet_in;
+    CDB_RS_PACKET	[2:0]	        cdb_packet_in;
+
+    logic                           not_ready_out;
+    RS_LINE                         rs_line_out;
+
+    RS_ONE_LINE DUT( //Should correct "RS_LINE"
+        //input
+        .clock(clock),
+        .reset(reset),
+        .enable(enable),
+        .clear(clear),
+        .squash_flag(squash_flag),
+        //.sel(sel),
+        .other_dest_reg1(other_dest_reg1),
+        .other_dest_reg2(other_dest_reg2),
+        .line_id(line_id),
+        .other_T1(other_T1),
+        .other_T2(other_T2),
+        .my_position(my_position),
+        .dp_packet(dp_packet_in),
+        .mt_packet(mt_packet_in),
+        .rob_packet(rob_packet_in),
+        .cdb_packet(cdb_packet_in),
+
+        //output
+        .not_ready(not_ready_out),
+        .rs_line(rs_line_out)
+    );
+
+    always begin
+        #10;
+        clock = ~clock;
+    end
+
+    initial begin
+        $monitor("time:%4.0f  clock:%b  not_ready:%b  rs_line:%h",
+                $time, clock, not_ready_out, rs_line_out.RSID);
+        clock   = 0;
+        reset   = 1;
+        enable  = 1;
+        clear   = 0;
+        squash_flag = 0;
+        other_dest_reg1 = 0;
+        other_dest_reg2 = 0;
+        line_id = 0;
+        other_T1 = 0;
+        other_T2 = 0;
+        my_position = 0;
+    
+        dp_packet_in  = {
+            `NOP,             //NOP
+            {`XLEN{1'b0}},    // PC + 4
+            {`XLEN{1'b0}},     // PC
+
+            {`XLEN{1'b0}},    // reg A value 
+            {`XLEN{1'b0}},    // reg B value
+
+            OPA_IS_RS1,     // ALU opa mux select (ALU_OPA_xxx *)
+            OPB_IS_RS2,     // ALU opb mux select (ALU_OPB_xxx *)
+
+            `ZERO_REG,    // destination (writeback) register index
+            ALU_ADD,     // ALU function select (ALU_xxx *)
+            1'b0,    //rd_mem
+            1'b0,    //wr_mem
+            1'b0,    //cond
+            1'b0,    //uncond
+            1'b0,    //halt
+            1'b0,    //illegal
+            1'b0,    //csr_op
+            1'b1,    //valid
+            1'b0,    //rs1_insn
+            1'b0     //rs2_insn
+        };
+
+        mt_packet_in.T1_plus = 0;
+        mt_packet_in.T2_plus = 0;
+        mt_packet_in.T1      = {$clog2(`ROBLEN){1'b0}};
+        mt_packet_in.T2      = {$clog2(`ROBLEN){1'b0}};
+        mt_packet_in.valid1  = 0;
+        mt_packet_in.valid2  = 0;
+
+        rob_packet_in.V1     = {`XLEN{1'b0}};
+        rob_packet_in.V2     = {`XLEN{1'b0}};
+        rob_packet_in.T      = {$clog2(`ROBLEN){1'b0}};
+        rob_packet_in.valid1 = 0;
+        rob_packet_in.valid2 = 0;
+
+        cdb_packet_in[0].tag   = {$clog2(`ROBLEN){1'b0}};
+        cdb_packet_in[0].value = {`XLEN{1'b0}};
+        cdb_packet_in[0].valid = 0;
+
+        cdb_packet_in[1].tag   = {$clog2(`ROBLEN){1'b0}};
+        cdb_packet_in[1].value = {`XLEN{1'b0}};
+        cdb_packet_in[1].valid = 0;
+    
+        cdb_packet_in[2].tag   = {$clog2(`ROBLEN){1'b0}};
+        cdb_packet_in[2].value = {`XLEN{1'b0}};
+        cdb_packet_in[2].valid = 0;
+
+        @(negedge clock);
+        @(negedge clock);
+        @(negedge clock);
+        @(negedge clock);
+        @(negedge clock);
+        @(negedge clock);
+        reset = 0;
+
+        /////////////////////////////////////////////////////////////////////////
+        //                                                                     //
+        // test 1: Pass an INST ADD to one RS line                             //
+        //                                                                     //
+        /////////////////////////////////////////////////////////////////////////
+
+            dp_packet_in  = {
+                `RV32_ADD,             //NOP
+                {`XLEN{1'b0}},    // PC + 4
+                {`XLEN{1'b0}},     // PC
+
+                {`XLEN'h0000_0001},    // reg A value 
+                {`XLEN'h0000_0002},    // reg B value
+
+                OPA_IS_RS1,     // ALU opa mux select (ALU_OPA_xxx *)
+                OPB_IS_RS2,     // ALU opb mux select (ALU_OPB_xxx *)
+
+                `ZERO_REG,    // destination (writeback) register index
+                ALU_ADD,     // ALU function select (ALU_xxx *)
+                1'b0,    //rd_mem
+                1'b0,    //wr_mem
+                1'b0,    //cond
+                1'b0,    //uncond
+                1'b0,    //halt
+                1'b0,    //illegal
+                1'b0,    //csr_op
+                1'b1,    //valid
+                1'b0,    //rs1_insn
+                1'b0     //rs2_insn
+            };
+
+            @(negedge clock);
+            @(negedge clock);
+            @(negedge clock);
+            @(negedge clock);
+            @(negedge clock);
+            @(negedge clock);
+
+        
+        /////////////////////////////////////////////////////////////////////////
+        //                                                                     //
+        // test 2: Clear the line                                              //
+        //                                                                     //
+        /////////////////////////////////////////////////////////////////////////
+
+            enable = 0;
+
+            @(negedge clock);
+            @(negedge clock);
+            @(negedge clock);
+            @(negedge clock);
+            @(negedge clock);
+            @(negedge clock);
+
+
+        $display("Test complete! \n ");    
+        $finish;
+    end
+
+endmodule
