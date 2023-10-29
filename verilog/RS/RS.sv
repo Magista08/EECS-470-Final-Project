@@ -42,7 +42,7 @@ module RS (
     input CDB_RS_PACKET [2:0] cdb_packet_in,
     //input IS_RS_PACKET	  is_packet_in,
    
-    output RS_IS_PACKET [2:0] ALU_ADD,
+    output RS_IS_PACKET [2:0] is_packet_out,
     output RS_DP_PACKET       dp_packet_out//to DP
 );
     RS_LINE [`RSLEN-1:0]      rs_table;
@@ -65,12 +65,12 @@ module RS (
     logic [`RSLEN-1:0]          read_inst_sig;
 
 
-    logic [$clog2(`ROBLEN)-1:0]	other_T1;
-    logic [$clog2(`ROBLEN)-1:0]	other_T2;
+    logic [`RSLEN-1:0] [$clog2(`ROBLEN)-1:0]	other_T1;
+    logic [`RSLEN-1:0] [$clog2(`ROBLEN)-1:0]	other_T2;
     //INST                    	other_inst1;
     //INST                    	other_inst2;
-    logic [4:0]                 other_dest_reg1;
-    logic [4:0]                 other_dest_reg2;
+    logic [`RSLEN-1:0] [4:0]                 other_dest_reg1;
+    logic [`RSLEN-1:0] [4:0]                 other_dest_reg2;
 
     
     // Record the final destination
@@ -98,15 +98,15 @@ module RS (
                                    slots[1][i] ? 1 :
                                    slots[2][i] ? 0 : 3;
             assign read_inst_sig[i] = (sel_buffer[i] != 3) ? 1'b1 : 1'b0;
-            assign other_T1 = ((sel_buffer[i] == 1) || (sel_buffer[i] == 2)) ? rob_packet_in[0].T : 0;
-            assign other_T2 = (sel_buffer[i] == 2) ? rob_packet_in[1].T : 0;
+            assign other_T1[i] = ((sel_buffer[i] == 1) || (sel_buffer[i] == 2)) ? rob_packet_in[0].T : 0;
+            assign other_T2[i] = (sel_buffer[i] == 2) ? rob_packet_in[1].T : 0;
             //assign other_inst1 = ((sel_buffer[i] == 1) || (sel_buffer[i] == 2)) ? dp_packet_in[0].inst : `NOP;
             //assign other_inst2 = (sel_buffer[i] == 2) ? dp_packet_in[1].inst : `NOP;
-            assign other_dest_reg1 = ((sel_buffer[i] == 1) || (sel_buffer[i] == 2)) ? dp_packet_in[0].dest_reg_idx : 0;
-            assign other_dest_reg2 = (sel_buffer[i] == 2) ? dp_packet_in[1].dest_reg_idx : 0;
+            assign other_dest_reg1[i] = ((sel_buffer[i] == 1) || (sel_buffer[i] == 2)) ? dp_packet_in[0].dest_reg_idx : 0;
+            assign other_dest_reg2[i] = (sel_buffer[i] == 2) ? dp_packet_in[1].dest_reg_idx : 0;
 
             // One Line Change
-            /*
+            
             RS_LINE RSL(
                 //input
                 .clock(clock),
@@ -119,19 +119,19 @@ module RS (
                 .mt_packet(mt_packet_in[sel_buffer[i]%3]),
                 .rob_packet(rob_packet_in[sel_buffer[i]%3]),
                 .cdb_packet(cdb_packet),
-                .other_T1(other_T1),
-                .other_T2(other_T2),
+                .other_T1(other_T1[i]),
+                .other_T2(other_T2[i]),
                 //.other_inst1(other_inst1),
                 //.other_inst2(other_inst2),
-                .other_dest_reg1(other_dest_reg1),
-                .other_dest_reg2(other_dest_reg2),
+                .other_dest_reg1(other_dest_reg1[i]),
+                .other_dest_reg2(other_dest_reg2[i]),
                 .my_position(sel_buffer[i]%3),
                 
                 //output
                 .not_ready(not_ready[i]),
                 .rs_line(rs_table[i])
             );
-            */           
+                       
 	    
         end
     endgenerate
