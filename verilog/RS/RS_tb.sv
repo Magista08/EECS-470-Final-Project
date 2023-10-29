@@ -35,8 +35,8 @@ module testbench;
     end    
 
     initial begin
-	    $monitor("is_packet_out[0].inst: %h  is_packet_out[1].inst: %h  is_packet_out[2].inst: %h  dp_packet_out.empty_num: %b",
-                  is_packet_out[0].inst, is_packet_out[1].inst, is_packet_out[2].inst, dp_packet_out.empty_num);
+	    $monitor("time:%4.0f  clock:%b  is_packet_out[0].inst:%h  is_packet_out[1].inst:%h  is_packet_out[2].inst:%h  dp_packet_out.empty_num:%b  is_packet_out[0].Tag: %h  is_packet_out[1].Tag: %h  is_packet_out[2].Tag: %h",
+                 $time, clock, is_packet_out[0].inst, is_packet_out[1].inst, is_packet_out[2].inst, dp_packet_out.empty_num, is_packet_out[0].Tag, is_packet_out[1].Tag, is_packet_out[2].Tag);
         clock   = 0;
         reset   = 1;
         enable  = 1;
