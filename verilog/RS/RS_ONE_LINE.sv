@@ -113,7 +113,7 @@ module RS_ONE_LINE (
 										mt_packet.T1;
 					end else begin
 						n_rs_line.T1 = (dp_packet.rs1_instruction && dp_packet.inst.r.rs1 == other_dest_reg2 && other_dest_reg2 != `ZERO_REG)? other_T2:
-									   (dp_packet.rs1_instruction && dp_packet.inst.r.rs1 == other_dest_reg1 && other_dest_reg1 != ZERO_REG)? other_T1:
+									   (dp_packet.rs1_instruction && dp_packet.inst.r.rs1 == other_dest_reg1 && other_dest_reg1 != `ZERO_REG)? other_T1:
 									   	valid_flag1? 0:
 										mt_packet.T1;
 					end

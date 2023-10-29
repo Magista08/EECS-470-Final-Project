@@ -43,7 +43,7 @@ module testbench;
 		output MT_RS_PACKET  mt_rs_in;
 		
 		begin 
-			for(integer a = 0; k <= 2;k ++) begin
+			for(integer a = 0; a <= 2; a++) begin
 					dp_packet_in[k]  = {
 						`NOP,             //NOP
 						{`XLEN{1'b0}},    // PC + 4
