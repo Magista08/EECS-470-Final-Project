@@ -4,7 +4,6 @@
 module testbench;
     logic                           clock, reset, enable;
     logic                           clear;
-    logic                           squash_flag;
     logic                           other_dest_reg1;
     logic                           other_dest_reg2;
     logic   [$clog2(`ROBLEN)-1:0]   line_id;
@@ -25,7 +24,6 @@ module testbench;
         .reset(reset),
         .enable(enable),
         .clear(clear),
-        .squash_flag(squash_flag),
         //.sel(sel),
         .other_dest_reg1(other_dest_reg1),
         .other_dest_reg2(other_dest_reg2),
@@ -55,7 +53,6 @@ module testbench;
         reset   = 1;
         enable  = 1;
         clear   = 0;
-        squash_flag = 0;
         other_dest_reg1 = 0;
         other_dest_reg2 = 0;
         line_id = 0;

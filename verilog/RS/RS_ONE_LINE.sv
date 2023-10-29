@@ -329,37 +329,39 @@ module RS_ONE_LINE (
 				1'b0,				     // csr_op
 				1'b0				     // valid
 			};
-
-		end else if(enable) begin
-			rs_line <= n_rs_line;
 		end else begin
-			rs_line <= '{
-				{$clog2(`RSLEN){1'b0}},  // RSID
-				`NOP,             		 // inst
-				1'b0,				  	 // busy
-				{$clog2(`ROBLEN){1'b0}}, // T
-				{$clog2(`ROBLEN){1'b0}}, // T1
-				{$clog2(`ROBLEN){1'b0}}, // T2
-				1'b0,			     	 // valid1
-				1'b0,             		 // valid2
-				{`XLEN{1'b0}},           // V1
-				{`XLEN{1'b0}},           // V2
-				{`XLEN{1'b0}},           // PC
-				{`XLEN{1'b0}},			 // NPC
-				OPA_IS_RS1,       		 // opa_select
-				OPB_IS_RS2,       		 // opb_select
-				`ZERO_REG,       		 // dest_reg_idx
-				ALU_ADD,         		 // alu_func
-				1'b0,				     // rd_mem
-				1'b0,				     // wr_mem
-				1'b0,				     // cond_branch
-				1'b0,                    // uncond_branch
-				1'b0,				     // halt
-				1'b0,			         // illegal
-				1'b0,				     // csr_op
-				1'b0				     // valid
-			};
+			rs_line <= n_rs_line;
 		end
+		// end else if(enable) begin
+		// 	rs_line <= n_rs_line;
+		// end else begin
+		// 	rs_line <= '{
+		// 		{$clog2(`RSLEN){1'b0}},  // RSID
+		// 		`NOP,             		 // inst
+		// 		1'b0,				  	 // busy
+		// 		{$clog2(`ROBLEN){1'b0}}, // T
+		// 		{$clog2(`ROBLEN){1'b0}}, // T1
+		// 		{$clog2(`ROBLEN){1'b0}}, // T2
+		// 		1'b0,			     	 // valid1
+		// 		1'b0,             		 // valid2
+		// 		{`XLEN{1'b0}},           // V1
+		// 		{`XLEN{1'b0}},           // V2
+		// 		{`XLEN{1'b0}},           // PC
+		// 		{`XLEN{1'b0}},			 // NPC
+		// 		OPA_IS_RS1,       		 // opa_select
+		// 		OPB_IS_RS2,       		 // opb_select
+		// 		`ZERO_REG,       		 // dest_reg_idx
+		// 		ALU_ADD,         		 // alu_func
+		// 		1'b0,				     // rd_mem
+		// 		1'b0,				     // wr_mem
+		// 		1'b0,				     // cond_branch
+		// 		1'b0,                    // uncond_branch
+		// 		1'b0,				     // halt
+		// 		1'b0,			         // illegal
+		// 		1'b0,				     // csr_op
+		// 		1'b0				     // valid
+		// 	};
+		// end
 	end
 	
 endmodule
