@@ -62,12 +62,13 @@ TCL_SCRIPT = 470synth.tcl
 # P1 TODO: change TESTBENCH and SOURCES to match your current modules
 # options for SOURCES:   ps4-assign.sv, ps4-if_else.sv | ps8.sv     | rps4.sv
 # options for TESTBENCH: ps4_test.sv                   | ps8_test.sv| rps4_test.sv
-TESTBENCH   = RS_tb.sv
+TESTBENCH   = RS_LINE_test.sv
 			
-SOURCES     = RS.sv RS_ONE_LINE.sv 
+SOURCES     = RS_ONE_LINE.sv 
 HEADERS	    = ../sys_defs.svh \
 			  ../ISA.svh 
-SYNTH_FILES = RS.vg # P1 NOTE: synthesis is not tested in project 1
+SYNTH_FILES = RS_ONE_LINE.vg # P1 NOTE: synthesis is not tested in project 1
+DDC_FILES     = RS_ONE_LINE.ddc
 # CHILD_MODULES = RS_ONE_LINE
 # CHILD_SOURCE = RS.sv RS_ONE_LINE.sv
 # the .vg rule is automatically generated below when the name of the file matches its top level module
@@ -84,7 +85,7 @@ simv: $(TESTBENCH) $(SOURCES) $(HEADERS)
 
 # a make pattern rule to generate the .vg synthesis files
 # pattern rules use the % as a wildcard to match multiple possible targets
-%.vg: $(SOURCES) $(TCL_SCRIPT) $(HEADERS)
+%.vg: $(SOURCES) $(TCL_SCRIPT) $(DDC_FILES) $(HEADERS)
 	@$(call PRINT_COLOR, 5, synthesizing the $* module)
 	@$(call PRINT_COLOR, 3, this might take a while...)
 	@$(call PRINT_COLOR, 3, NOTE: if this is slow to startup: run '"module load vcs verdi synopsys-synth"')
@@ -94,7 +95,14 @@ simv: $(TESTBENCH) $(SOURCES) $(HEADERS)
 # this also generates many other files, see the tcl script's introduction for info on each of them
 
 # add all sources as extra dependencies for each SYNTH_FILES target
-# this is used when SOURCES="$^" uses the automatic variable $^ to reference all dependencies
+$(DDC_FILES): %.ddc: $(SOURCES) $(TCL_SCRIPT) $(HEADERS)
+	@$(call PRINT_COLOR, 5, synthesizing the $* module)
+	@$(call PRINT_COLOR, 3, this might take a while...)
+	@$(call PRINT_COLOR, 3, NOTE: if this is slow to startup: run '"module load vcs verdi synopsys-synth"')
+	# pipefail causes the command to exit on failure even though it's piping to tee
+	set -o pipefail; MODULE=$* SOURCES="$(SOURCES)" dc_shell-t -f $(TCL_SCRIPT) | tee $*_synth.out
+	@$(call PRINT_COLOR, 6, finished synthesizing $@)
+.SECONDARY: $(DDC_FILES)
 
 # the synthesis executable runs your testbench on the synthesized versions of your modules
 syn_simv: $(TESTBENCH) $(SYNTH_FILES)
@@ -123,7 +131,7 @@ sim: simv
 
 syn: syn_simv
 	@$(call PRINT_COLOR, 5, running $<)
-	./syn_simv | tee program.syn.out
+	./$< | tee program.syn.out
 	@$(call PRINT_COLOR, 2, output saved to program.syn.out)
 
 # NOTE: phony targets don't create files matching their name, and make will always run their commands
