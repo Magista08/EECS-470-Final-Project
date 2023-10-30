@@ -183,9 +183,6 @@ module RS (
                     1'b0                     // valid
                 };
             end else begin
-                // posi[i] <= $clog2(rs_is_posi[i]); 
-                // $display("posi[%d] = %d", i, $clog2(rs_is_posi[i]));
-                // $display("posi[%d] = %d", i, posi[i]);
                 is_packet_out[i].T             <= rs_table[$clog2(rs_is_posi[i])].T;
                 is_packet_out[i].inst          <= rs_table[$clog2(rs_is_posi[i])].inst;
                 is_packet_out[i].PC            <= rs_table[$clog2(rs_is_posi[i])].PC;

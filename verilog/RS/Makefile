@@ -51,7 +51,7 @@ VCS_BAD_WARNINGS = +warn=noTFIPC +warn=noDEBUG_DEP +warn=noENUMASSIGN
 LIB = /afs/umich.edu/class/eecs470/lib/verilog/lec25dscc25.v
 
 # the EECS 470 synthesis script
-TCL_SCRIPT = synth/470synth.tcl
+TCL_SCRIPT = 470synth.tcl
 
 ####################################
 # ---- Executable Compilation ---- #
@@ -63,7 +63,7 @@ TCL_SCRIPT = synth/470synth.tcl
 # options for SOURCES:   ps4-assign.sv, ps4-if_else.sv | ps8.sv     | rps4.sv
 # options for TESTBENCH: ps4_test.sv                   | ps8_test.sv| rps4_test.sv
 TESTBENCH   = RS_tb.sv
-			  
+			
 SOURCES     = RS.sv RS_ONE_LINE.sv 
 HEADERS	    = ../sys_defs.svh \
 			  ../ISA.svh 
