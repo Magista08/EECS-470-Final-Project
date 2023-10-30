@@ -131,11 +131,11 @@ set suppress_errors "UID-401 OPT-1206 OPT-1207 OPT-12"
 
 # read ddc files directly, and give their modules the "dont_touch" parameter
 # only if those modules were set above
-if { [info exists child_modules] && $child_modules ne "" &&
-     [info exists ddc_files    ] && $ddc_files     ne "" } {
-  read_file -format ddc [list $ddc_files]
-  set_dont_touch $child_modules
-}
+# if { [info exists child_modules] && $child_modules ne "" &&
+#      [info exists ddc_files    ] && $ddc_files     ne "" } {
+#   read_file -format ddc [list $ddc_files]
+#   set_dont_touch $child_modules
+# }
 
 # try to elaborate and set the current design, but quit early if there are errors
 # the combination of analyze and elaborate does the same thing as read_file

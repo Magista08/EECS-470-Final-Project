@@ -34,6 +34,7 @@ module RS_ONE_LINE (
     RS_LINE  				n_rs_line;
     logic 					valid_flag1;
 	logic 					valid_flag2;
+	logic					not_ready_flag;
 
 	assign		valid_flag1 = (~mt_packet.valid1) || 
 							  (cdb_packet[0].valid && mt_packet.T1 == cdb_packet[0].tag) || 
@@ -89,7 +90,7 @@ module RS_ONE_LINE (
 				1'b0,				     // csr_op
 				1'b0				     // valid
 			};
-			not_ready = 1;
+			not_ready_flag = 1;
 
 		// clear = 0 conditon
 		end else begin
@@ -170,9 +171,9 @@ module RS_ONE_LINE (
 					n_rs_line.valid = dp_packet.valid;
 
 					if (valid_flag1 && valid_flag2) begin            // not_ready is to decide 'issue'
-						not_ready = 0;
+						not_ready_flag = 0;
 					end else begin
-						not_ready = 1;
+						not_ready_flag = 1;
 					end
 				// inst == NOP condition
 				end else begin
@@ -202,7 +203,7 @@ module RS_ONE_LINE (
 						1'b0,				     // csr_op
 						1'b0				     // valid
 					};
-					not_ready = 1;
+					not_ready_flag = 1;
 				end
 			// enable = 0 conditon
 			end else begin
@@ -235,7 +236,7 @@ module RS_ONE_LINE (
 						1'b0,				     // csr_op
 						1'b0				     // valid
 					};
-					not_ready = 1;
+					not_ready_flag = 1;
 				// RS_line filled (busy = 1)
 				end else begin
 					n_rs_line.valid1 = ((cdb_packet[0].valid && rs_line.T1 == cdb_packet[0].tag) || 
@@ -291,7 +292,7 @@ module RS_ONE_LINE (
 					n_rs_line.csr_op = rs_line.csr_op;
 					n_rs_line.valid = rs_line.valid;
 
-					not_ready = n_rs_line.T1 || n_rs_line.T2;
+					not_ready_flag = n_rs_line.T1 || n_rs_line.T2;
 
 				end
 
@@ -329,8 +330,11 @@ module RS_ONE_LINE (
 				1'b0,				     // csr_op
 				1'b0				     // valid
 			};
+			not_ready <= 1;
+
 		end else begin
-			rs_line <= n_rs_line;
+			rs_line   <= n_rs_line;
+			not_ready <= not_ready_flag;
 		end
 		// end else if(enable) begin
 		// 	rs_line <= n_rs_line;

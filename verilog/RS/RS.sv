@@ -157,7 +157,6 @@ module RS (
 
             // Packet out
             if (rs_is_posi[i] == 0) begin
-                //posi[i] <= 0;
                 is_packet_out[i] <={
                     {$clog2(`ROBLEN){1'b0}}, // T
                     `NOP,                    // inst
@@ -220,7 +219,7 @@ module RS (
         count = 0;
         for (int k = 0; k < `RSLEN; k++) begin
                 if (~out_busy[k]) begin
-                count = count + 1;
+                    count = count + 1;
                 end
         end
     end

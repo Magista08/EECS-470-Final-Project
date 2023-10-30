@@ -42,6 +42,8 @@ export CLOCK_PERIOD = 20.0
 # the Verilog Compiler command and arguments
 VCS = SW_VCS=2020.12-SP2-1 vcs -sverilog +vc -Mupdate -line -full64 -kdb -lca \
       -debug_access+all+reverse $(VCS_BAD_WARNINGS) +define+CLOCK_PERIOD=$(CLOCK_PERIOD)
+
+# VCS = vcs -V -sverilog +vc -Mupdate -line -full64 +vcs+vcdpluson -debug_pp
 # a SYNTH define is added when compiling for synthesis that can be used in testbenches
 
 # remove certain warnings that generate MB of text but can be safely ignored
@@ -62,15 +64,13 @@ TCL_SCRIPT = 470synth.tcl
 # P1 TODO: change TESTBENCH and SOURCES to match your current modules
 # options for SOURCES:   ps4-assign.sv, ps4-if_else.sv | ps8.sv     | rps4.sv
 # options for TESTBENCH: ps4_test.sv                   | ps8_test.sv| rps4_test.sv
-TESTBENCH   = RS_LINE_test.sv
+TESTBENCH   = RS_tb.sv
 			
-SOURCES     = RS_ONE_LINE.sv 
+SOURCES     = RS.sv RS_ONE_LINE.sv 
 HEADERS	    = ../sys_defs.svh \
 			  ../ISA.svh 
 SYNTH_FILES = RS_ONE_LINE.vg # P1 NOTE: synthesis is not tested in project 1
 DDC_FILES     = RS_ONE_LINE.ddc
-# CHILD_MODULES = RS_ONE_LINE
-# CHILD_SOURCE = RS.sv RS_ONE_LINE.sv
 # the .vg rule is automatically generated below when the name of the file matches its top level module
 # P1 NOTE: this doesn't work for ps4-assign.sv and ps4-if_else.sv, but you don't need synthesis for P1
 
