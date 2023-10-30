@@ -10,7 +10,7 @@ module RS_ONE_LINE (
     input             	       clock, reset, enable,
     input 	 				   clear,             // whether clear the RS_line
     // input  					   squash_flag,
-    input [$clog2(`ROBLEN)-1:0]line_id,    // line_id will not be cleared when clear and reset, remain unchanged
+    input [$clog2(`RSLEN)-1:0]line_id,    // line_id will not be cleared when clear and reset, remain unchanged
     // input					sel,
     input DP_IS_PACKET 		   dp_packet,
     input MT_RS_PACKET  	   mt_packet,
@@ -290,6 +290,8 @@ module RS_ONE_LINE (
 					n_rs_line.illegal = rs_line.illegal;
 					n_rs_line.csr_op = rs_line.csr_op;
 					n_rs_line.valid = rs_line.valid;
+
+					not_ready = n_rs_line.T1 || n_rs_line.T2;
 
 				end
 
