@@ -2,7 +2,7 @@
 	我们决定将superscalar的way number改为packet外，所以sys_defs中
 	打包的【2:0】都去掉
 */
-`include "../sys_defs.svh"
+`include "verilog/sys_defs.svh"
 
 module RS_ONE_LINE (
 	// INPUT

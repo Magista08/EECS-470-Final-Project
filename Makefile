@@ -159,12 +159,15 @@ GREP = grep -E --color=auto
 # - with dependencies: 'rob.simv', 'rob.cov', and 'synth/rob.vg'
 
 # TODO: add more modules here
-TESTED_MODULES = mult rob
+TESTED_MODULES = mult RS RS_ONE_LINE
 
 # TODO: add verilog module dependencies here:
 # (do not include header files)
 # Helper function:
 DEPS = $(1).simv $(1).cov synth/$(1).vg
+
+RS_DEPS = verilog/RS_ONE_LINE.sv
+$(call DEPS,RS): $(RS_DEPS)
 
 MULT_DEPS = verilog/mult_stage.sv
 $(call DEPS,mult): $(MULT_DEPS)

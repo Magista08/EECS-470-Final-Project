@@ -1,5 +1,5 @@
-`include "../sys_defs.svh"
-`include "../ISA.svh"
+`include "verilog/sys_defs.svh"
+`include "verilog/ISA.svh"
 
 module testbench;
     logic                               clock, reset, enable;

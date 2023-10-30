@@ -64,9 +64,9 @@ TCL_SCRIPT = 470synth.tcl
 # P1 TODO: change TESTBENCH and SOURCES to match your current modules
 # options for SOURCES:   ps4-assign.sv, ps4-if_else.sv | ps8.sv     | rps4.sv
 # options for TESTBENCH: ps4_test.sv                   | ps8_test.sv| rps4_test.sv
-TESTBENCH   = RS_tb.sv
+TESTBENCH   = RS_LINE_test.sv
 			
-SOURCES     = RS.sv RS_ONE_LINE.sv 
+SOURCES     = RS_ONE_LINE.sv 
 HEADERS	    = ../sys_defs.svh \
 			  ../ISA.svh 
 SYNTH_FILES = RS_ONE_LINE.vg # P1 NOTE: synthesis is not tested in project 1
