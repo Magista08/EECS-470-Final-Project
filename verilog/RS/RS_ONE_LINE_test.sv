@@ -6,7 +6,7 @@ module testbench;
     logic                           clear;
     logic            [4:0]          other_dest_reg1;
     logic            [4:0]          other_dest_reg2;
-    logic   [$clog2(`ROBLEN)-1:0]   line_id;
+    logic   [`RSLEN-1:0]   line_id;
     logic   [$clog2(`ROBLEN)-1:0]   other_T1;
     logic   [$clog2(`ROBLEN)-1:0]   other_T2;
     logic           [1:0]           my_position;
@@ -404,7 +404,7 @@ module testbench;
 		@(negedge clock);
 		clear = 0;
 		$display("test 5 complete");
-        $display("Test complete! \n ");    
+        $display("@@@ Passed \n ");    
         $finish;
     end
 

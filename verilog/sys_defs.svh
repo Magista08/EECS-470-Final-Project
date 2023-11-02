@@ -21,7 +21,7 @@
 // this is *your* processor, you decide these values (try analyzing which is best!)
 
 // superscalar width
-`define N 1
+`define N 3
 
 // sizes
 `define ROBLEN 64

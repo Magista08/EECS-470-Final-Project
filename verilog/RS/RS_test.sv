@@ -624,12 +624,10 @@ module testbench;
                     dp_packet_in[0].inst,dp_packet_in[1].inst,dp_packet_in[2].inst );
         
             @(negedge clock);
-			clear_input(
-				dp_packet_in,
-				cdb_in,
-				rob_in,
-				mt_rs_in
-		    );
+            @(negedge clock);
+			@(negedge clock);
+            @(negedge clock);
+			@(negedge clock);
             @(negedge clock);
 
         $display("Test complete! \n ");    
