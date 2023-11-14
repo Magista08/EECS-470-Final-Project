@@ -106,6 +106,14 @@ typedef enum logic [1:0] {
     BUS_STORE  = 2'h2
 } BUS_COMMAND;
 
+typedef enum logic [1:0] {
+	// FUNC_NOP    = 2'h0,    // no instruction free, DO NOT USE THIS AS DEFAULT CASE!
+	FUNC_ALU = 2'd1,    // all of the instruction  except mult and load and store
+	FUNC_MUL = 2'd2,    // mult 
+	FUNC_MEM = 2'd3     // load and store
+}FUNC_UNIT;
+
+
 ///////////////////////////////
 // ---- Exception Codes ---- //
 ///////////////////////////////
@@ -314,9 +322,13 @@ typedef struct packed {
     logic       csr_op;        // Is this a CSR operation? (we use this to get return code)
 
     logic       valid;
-    logic       rs1_instruction;
+    logic       rs1_instruction; // 1: RS1 is in use, 0: RS1 not in use
     logic       rs2_instruction;
-} DP_IS_PACKET;
+
+    logic      dest_reg_valid;   // 1: des_reg is in use, 0: des_reg not in use  
+
+    FUNC_UNIT   func_unit;
+} DP_PACKET;
 
 /**
  * EX_MEM Packet:
@@ -399,6 +411,7 @@ typedef struct packed {
     logic       csr_op;        // Is this a CSR operation? (we only used this as a cheap way to get return code)
 
     logic       valid;
+    FUNC_UNIT   func_unit;
 } RS_LINE;
 
 typedef struct packed {
@@ -484,7 +497,7 @@ typedef struct packed {
 } MT_RS_PACKET;//
 
 typedef struct packed {
-    DP_IS_PACKET [2:0] 			packet;
+    DP_PACKET [2:0] 			packet;
 } DP_RS_PACKET;
 /*
 typedef struct packed {
@@ -519,15 +532,29 @@ typedef struct packed {
     logic       csr_op;        // Is this a CSR operation? (we only used this as a cheap way to get return code)
 
     logic       valid;
+    FUNC_UNIT   func_unit;
 } RS_IS_PACKET;
 
 typedef struct packed {
     logic [1:0]				empty_num;//to DP
-} RS_DP_PACKET;
+} RS_IF_PACKET;
 
 typedef struct packed{
     logic [4:0] dest_reg_idx;
     logic [$clog2(`ROBLEN)-1:0] T;
 } CURRENT_MT_TABLE;
 
+typedef struct packed {
+	logic [4:0] 	  			  dest_reg_idx;  // Retired register
+	logic [`XLEN-1:0] 			  value;// Value for retired register
+	logic [$clog2(`ROBLEN)-1:0] retire_tag;  // #ROB for retired register
+    logic                         valid;       // cp_bit
+	logic 			  			  wr_en;	   // 0 if rd is `ZERO_REG
+	logic						  illegal;
+	logic						  halt;
+	logic [`XLEN-1:0]             PC;
+} RT_PACKET;
+
+
 `endif // __SYS_DEFS_SVH__
+

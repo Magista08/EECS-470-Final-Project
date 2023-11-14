@@ -12,7 +12,7 @@ module RS_ONE_LINE (
     // input  					   squash_flag,
     input [$clog2(`RSLEN)-1:0]line_id,    // line_id will not be cleared when clear and reset, remain unchanged
     // input					sel,
-    input DP_IS_PACKET 		   dp_packet,
+    input DP_PACKET 		   dp_packet,
     input MT_RS_PACKET  	   mt_packet,
     input ROB_RS_PACKET		   rob_packet,
     input CDB_RS_PACKET	[2:0]  cdb_packet,
@@ -88,7 +88,8 @@ module RS_ONE_LINE (
 				1'b0,				     // halt
 				1'b0,			         // illegal
 				1'b0,				     // csr_op
-				1'b0				     // valid
+				1'b0,  			     	 // valid
+				FUNC_ALU				 // func_unit
 			};
 			not_ready_flag = 1;
 
@@ -169,6 +170,7 @@ module RS_ONE_LINE (
 					n_rs_line.illegal = dp_packet.illegal;
 					n_rs_line.csr_op = dp_packet.csr_op;
 					n_rs_line.valid = dp_packet.valid;
+					n_rs_line.func_unit = dp_packet.func_unit;
 
 					if (valid_flag1 && valid_flag2) begin            // not_ready is to decide 'issue'
 						not_ready_flag = 0;
@@ -201,7 +203,8 @@ module RS_ONE_LINE (
 						1'b0,				     // halt
 						1'b0,			         // illegal
 						1'b0,				     // csr_op
-						1'b0				     // valid
+						1'b0,  			     	 // valid
+						FUNC_ALU				 // func_unit
 					};
 					not_ready_flag = 1;
 				end
@@ -211,7 +214,7 @@ module RS_ONE_LINE (
 				// RS_line unfilled 
 				if (!rs_line.busy) begin
 					n_rs_line = '{
-						line_id, 				 // RSID
+						line_id,  				 // RSID
 						`NOP,             		 // inst
 						1'b0,				  	 // busy
 						{$clog2(`ROBLEN){1'b0}}, // T
@@ -234,7 +237,8 @@ module RS_ONE_LINE (
 						1'b0,				     // halt
 						1'b0,			         // illegal
 						1'b0,				     // csr_op
-						1'b0				     // valid
+						1'b0,  			     	 // valid
+						FUNC_ALU				 // func_unit
 					};
 					not_ready_flag = 1;
 				// RS_line filled (busy = 1)
@@ -291,6 +295,7 @@ module RS_ONE_LINE (
 					n_rs_line.illegal = rs_line.illegal;
 					n_rs_line.csr_op = rs_line.csr_op;
 					n_rs_line.valid = rs_line.valid;
+					n_rs_line.func_unit = rs_line.func_unit;
 
 					not_ready_flag = n_rs_line.T1 || n_rs_line.T2;
 
@@ -305,7 +310,7 @@ module RS_ONE_LINE (
     always_ff @(posedge clock) begin
         if (reset || clear) begin  // if empty=0，rs_line stalls
 			rs_line <= '{
-				line_id,				 // RSID
+				line_id,  				 // RSID
 				`NOP,             		 // inst
 				1'b0,				  	 // busy
 				{$clog2(`ROBLEN){1'b0}}, // T
@@ -328,7 +333,8 @@ module RS_ONE_LINE (
 				1'b0,				     // halt
 				1'b0,			         // illegal
 				1'b0,				     // csr_op
-				1'b0				     // valid
+				1'b0,  			     	 // valid
+				FUNC_ALU				 // func_unit
 			};
 			not_ready <= 1;
 

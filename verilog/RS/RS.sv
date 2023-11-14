@@ -1,37 +1,32 @@
 `include "../sys_defs.svh"
 
-module PSEL (
-    input logic [`RSLEN-1:0]     req0,
-    output logic [`RSLEN-1:0]    gnt0,
-    output logic [`RSLEN-1:0]    gnt1,
-    output logic [`RSLEN-1:0]    gnt2
+module psel(
+    //input 
+    input logic [`RSLEN-1:0] req,
+
+    // output
+    output logic [`RSLEN-1:0]         sel,
+    output logic [$clog2(`RSLEN)-1:0] sel_idx,
+    output logic                      sel_vld
 );
-    logic [`RSLEN-1:0] req1;
-    logic [`RSLEN-1:0] req2;
-    logic [`RSLEN-1:0] pre_req0;
-    logic [`RSLEN-1:0] pre_req1;
-    logic [`RSLEN-1:0] pre_req2;
+    assign sel_vld = !(&req);
 
-    assign req1 = req0 | gnt0;
-    assign req2 = req1 | gnt1;
+    always_comb begin
+        // init
+        sel = {`RSLEN{1'b0}};
+        sel_idx = {$clog2(`RSLEN){1'b0}};
 
-	
-    assign gnt0[0] = ~req0[0];
-    assign pre_req0[0] = req0[0];
-    assign gnt1[0] = ~req1[0];
-    assign pre_req1[0] = req1[0];
-    assign gnt2[0] = ~req2[0];
-    assign pre_req2[0] = req2[0];
-    genvar i;
-    for(i = 1; i<`RSLEN; i++)begin
-        assign gnt0[i] = ~req0[i] & pre_req0[i-1];  
-        assign pre_req0[i] = req0[i] & pre_req0[i-1];
-        assign gnt1[i] = ~req1[i] & pre_req1[i-1];  
-        assign pre_req1[i] = req1[i] & pre_req1[i-1];
-        assign gnt2[i] = ~req2[i] & pre_req2[i-1];  
-        assign pre_req2[i] = req2[i] & pre_req2[i-1];
-    end    
-endmodule 
+        // Change
+        for (int i = `RSLEN-1; i >= 0; i--) begin
+            if (!req[i]) begin
+                sel[i] = 1'b1;
+                sel_idx = i;
+                break;
+            end
+        end
+    end
+
+endmodule
 
 module RS (
     input             		  clock, reset, enable,
@@ -54,11 +49,15 @@ module RS (
     // Select the line to insert
     logic [`RSLEN-1:0] [$clog2(3)-1:0] sel_buffer;
     logic [2:0] [`RSLEN-1:0] slots;   // 0: Cannot insert        1: Able to insert
+    logic [2:0] [$clog2(`RSLEN)-1:0] slots_idx_out;
+    logic [2:0]                      slots_vld_out;
 
     // Determine which instr to output
-    logic       [`RSLEN-1:0]    not_ready;
-    logic [2:0] [`RSLEN-1:0]    rs_is_posi;
-    logic [`RSLEN-1:0]          read_inst_sig;
+    logic       [`RSLEN-1:0]            not_ready;
+    logic [2:0] [`RSLEN-1:0]            rs_is_out;
+    logic [2:0] [$clog2(`RSLEN)-1:0]    rs_is_posi;
+    logic [2:0]                         sel_vld_out;
+    logic [`RSLEN-1:0]                  read_inst_sig;
 
     logic [`RSLEN-1:0] [$clog2(`ROBLEN)-1:0]	other_T1;
     logic [`RSLEN-1:0] [$clog2(`ROBLEN)-1:0]	other_T2;
@@ -90,9 +89,9 @@ module RS (
         
         for (i=0; i<`RSLEN; i++) begin
 	        // whether select
-            assign sel_buffer[i] = slots[0][i] ? 2 :
-                                   slots[1][i] ? 1 :
-                                   slots[2][i] ? 0 : 3;
+            assign sel_buffer[i] = slots[0][i] ? 2'b10 :
+                                   slots[1][i] ? 2'b01 :
+                                   slots[2][i] ? 2'b00 : 2'b11;
             assign read_inst_sig[i] = (sel_buffer[i] != 3) ? 1'b1 : 1'b0;
             assign other_T1[i] = ((sel_buffer[i] == 1) || (sel_buffer[i] == 2)) ? rob_packet_in[0].T : 0;
             assign other_T2[i] = (sel_buffer[i] == 2) ? rob_packet_in[1].T : 0;
@@ -129,15 +128,37 @@ module RS (
     endgenerate
     
     // Psel for ready bit
-    PSEL is_psel(
+
+    psel sel1(
         // input
-        .req0(not_ready),
+        .req(not_ready),
 
         // output
-        .gnt0(rs_is_posi[0]),
-        .gnt1(rs_is_posi[1]),
-        .gnt2(rs_is_posi[2])
+        .sel(rs_is_out[0]),
+        .sel_idx(rs_is_posi[0]),
+        .sel_vld(sel_vld_out[0])
     );
+
+    psel sel2(
+        // input
+        .req(not_ready + rs_is_out[0]),
+
+        // output
+        .sel(rs_is_out[1]),
+        .sel_idx(rs_is_posi[1]),
+        .sel_vld(sel_vld_out[1])
+    );
+
+    psel sel3(
+        // input
+        .req(not_ready + rs_is_out[1] + rs_is_out[0]),
+
+        // output
+        .sel(rs_is_out[2]),
+        .sel_idx(rs_is_posi[2]),
+        .sel_vld(sel_vld_out[2])
+    );
+
     always_ff @(posedge clock) begin
         // Re-init
         //is_packet_count <= 0;
@@ -151,12 +172,12 @@ module RS (
         clear_signal <= {`RSLEN{squash_flag}};
         
         // Send to IS
-        // $display("not_ready = %b", not_ready);
+        $display("not_ready = %b", not_ready);
         for (int i=0; i<3; i++) begin
             // FU detect hazard
 
             // Packet out
-            if (rs_is_posi[i] == 0) begin
+            if (!sel_vld_out[i]) begin
                 is_packet_out[i] <={
                     {$clog2(`ROBLEN){1'b0}}, // T
                     `NOP,                    // inst
@@ -179,32 +200,33 @@ module RS (
                     1'b0,                    // halt
                     1'b0,                    // illegal
                     1'b0,                    // csr_op
-                    1'b0                     // valid
+                    1'b0,                    // valid
+                    FUNC_ALU                 // func_unit
                 };
             end else begin
-                is_packet_out[i].T             <= rs_table[$clog2(rs_is_posi[i])].T;
-                is_packet_out[i].inst          <= rs_table[$clog2(rs_is_posi[i])].inst;
-                is_packet_out[i].PC            <= rs_table[$clog2(rs_is_posi[i])].PC;
-                is_packet_out[i].NPC           <= rs_table[$clog2(rs_is_posi[i])].NPC;
+                is_packet_out[i].T             <= rs_table[rs_is_posi[i]].T;
+                is_packet_out[i].inst          <= rs_table[rs_is_posi[i]].inst;
+                is_packet_out[i].PC            <= rs_table[rs_is_posi[i]].PC;
+                is_packet_out[i].NPC           <= rs_table[rs_is_posi[i]].NPC;
 
-                is_packet_out[i].rs1_value     <= rs_table[$clog2(rs_is_posi[i])].V1;
-                is_packet_out[i].rs2_value     <= rs_table[$clog2(rs_is_posi[i])].V2;
+                is_packet_out[i].rs1_value     <= rs_table[rs_is_posi[i]].V1;
+                is_packet_out[i].rs2_value     <= rs_table[rs_is_posi[i]].V2;
 
-                is_packet_out[i].opa_select    <= rs_table[$clog2(rs_is_posi[i])].opa_select;
-                is_packet_out[i].opb_select    <= rs_table[$clog2(rs_is_posi[i])].opb_select;
-                is_packet_out[i].dest_reg_idx  <= rs_table[$clog2(rs_is_posi[i])].dest_reg_idx;
-                is_packet_out[i].alu_func      <= rs_table[$clog2(rs_is_posi[i])].alu_func;
-                is_packet_out[i].rd_mem        <= rs_table[$clog2(rs_is_posi[i])].rd_mem;
-                is_packet_out[i].wr_mem        <= rs_table[$clog2(rs_is_posi[i])].wr_mem;
-                is_packet_out[i].cond_branch   <= rs_table[$clog2(rs_is_posi[i])].cond_branch;
-                is_packet_out[i].uncond_branch <= rs_table[$clog2(rs_is_posi[i])].uncond_branch;
-                is_packet_out[i].halt          <= rs_table[$clog2(rs_is_posi[i])].halt;
-                is_packet_out[i].illegal       <= rs_table[$clog2(rs_is_posi[i])].illegal;
-                is_packet_out[i].csr_op        <= rs_table[$clog2(rs_is_posi[i])].csr_op;
-                is_packet_out[i].valid         <= rs_table[$clog2(rs_is_posi[i])].valid;
-
+                is_packet_out[i].opa_select    <= rs_table[rs_is_posi[i]].opa_select;
+                is_packet_out[i].opb_select    <= rs_table[rs_is_posi[i]].opb_select;
+                is_packet_out[i].dest_reg_idx  <= rs_table[rs_is_posi[i]].dest_reg_idx;
+                is_packet_out[i].alu_func      <= rs_table[rs_is_posi[i]].alu_func;
+                is_packet_out[i].rd_mem        <= rs_table[rs_is_posi[i]].rd_mem;
+                is_packet_out[i].wr_mem        <= rs_table[rs_is_posi[i]].wr_mem;
+                is_packet_out[i].cond_branch   <= rs_table[rs_is_posi[i]].cond_branch;
+                is_packet_out[i].uncond_branch <= rs_table[rs_is_posi[i]].uncond_branch;
+                is_packet_out[i].halt          <= rs_table[rs_is_posi[i]].halt;
+                is_packet_out[i].illegal       <= rs_table[rs_is_posi[i]].illegal;
+                is_packet_out[i].csr_op        <= rs_table[rs_is_posi[i]].csr_op;
+                is_packet_out[i].valid         <= rs_table[rs_is_posi[i]].valid;
+                is_packet_out[i].func_unit     <= rs_table[rs_is_posi[i]].func_unit;
                 // Pass the signal that this line is emptied
-                clear_signal[$clog2(rs_is_posi[i])] <= 1'b1;
+                clear_signal[rs_is_posi[i]] <= 1'b1;
             end
         end
     end
@@ -226,14 +248,34 @@ module RS (
     assign dp_packet_out.empty_num = (count>3) ? 3 : count;
 
     // Clear the emptied_lines based on psel
-    PSEL clean_psel(
+    psel clean_psel0(
         // input
-        .req0(emptied_lines),
-        
+        .req(emptied_lines),
+
         // output
-        .gnt0(slots[0]),
-        .gnt1(slots[1]),
-        .gnt2(slots[2])
+        .sel(slots[0]),
+        .sel_idx(slots_idx_out[0]),
+        .sel_vld(slots_vld_out[0])
+    );
+
+    psel clean_psel1(
+        // input
+        .req(emptied_lines + slots[0]),
+
+        // output
+        .sel(slots[1]),
+        .sel_idx(slots_idx_out[1]),
+        .sel_vld(slots_vld_out[1])
+    );
+
+    psel clean_psel2(
+        // input
+        .req(emptied_lines + slots[1] + slots[0]),
+
+        // output
+        .sel(slots[2]),
+        .sel_idx(slots_idx_out[2]),
+        .sel_vld(slots_vld_out[2])
     );
 
     

@@ -35,7 +35,7 @@ module testbench;
     end
 	
 	// Task to clear the input
-	
+	/*
 	task clear_input;
 		output ROB_RS_PACKET dp_packet_in;
 		output CDB_RS_PACKET cdb_in;
@@ -93,6 +93,7 @@ module testbench;
 			end
 		end
 	endtask
+    */
 	
 	
 
@@ -110,8 +111,8 @@ module testbench;
 
         /////////////////////////////////////////////////////////////////////////
         //                                                                     //
-        //   dispatch signal                                                   //
-        //                                                                     //                                                                                                                                                                                                                                                                                                                            
+        //                      dispatch signal                                //
+        //                                                                     // 
         /////////////////////////////////////////////////////////////////////////
             dp_packet_in[0]  = {
                 `NOP,             //NOP
@@ -399,20 +400,6 @@ module testbench;
             @(negedge clock);
             @(negedge clock);
             @(negedge clock);
-			clear_input(
-				dp_packet_in,
-				cdb_in,
-				rob_in,
-				mt_rs_in
-		    );
-            @(negedge clock);
-            @(negedge clock);
-            @(negedge clock);
-            @(negedge clock);
-            @(negedge clock);
-            @(negedge clock);
-            @(negedge clock);
-
         /////////////////////////////////////////////////////////////////////////
         //                                                                     //
         // test 3: ADD + NOP +ADD                                              //
@@ -555,12 +542,10 @@ module testbench;
             };
 
             @(negedge clock);
-			clear_input(
-				dp_packet_in,
-				cdb_in,
-				rob_in,
-				mt_rs_in
-		    );
+            @(negedge clock);
+			@(negedge clock);
+            @(negedge clock);
+			@(negedge clock);
             @(negedge clock);
 
         	
@@ -630,7 +615,7 @@ module testbench;
 			@(negedge clock);
             @(negedge clock);
 
-        $display("Test complete! \n ");    
+        $display("@@@ Passed\n ");    
         $finish;
     end
     

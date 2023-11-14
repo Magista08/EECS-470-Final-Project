@@ -4,9 +4,9 @@
 module testbench;
     logic                           clock, reset, enable;
     logic                           clear;
-    logic            [4:0]          other_dest_reg1;
-    logic            [4:0]          other_dest_reg2;
-    logic   [`RSLEN-1:0]   line_id;
+    logic   [4:0]                   other_dest_reg1;
+    logic   [4:0]                   other_dest_reg2;
+    logic   [$clog2(`ROBLEN)-1:0]   line_id;
     logic   [$clog2(`ROBLEN)-1:0]   other_T1;
     logic   [$clog2(`ROBLEN)-1:0]   other_T2;
     logic           [1:0]           my_position;
@@ -24,6 +24,7 @@ module testbench;
         .reset(reset),
         .enable(enable),
         .clear(clear),
+        //.sel(sel),
         .other_dest_reg1(other_dest_reg1),
         .other_dest_reg2(other_dest_reg2),
         .line_id(line_id),
@@ -44,20 +45,16 @@ module testbench;
         #10;
         clock = ~clock;
     end
-	
-	
-	
 
     initial begin
-        $monitor("time:%4.0f  clock:%b  not_ready:%b  rs_line_ID:%h  rs_line_inst:%h  busy:%h  V1:%h V2:%h",
-                $time, clock, not_ready_out, rs_line_out.RSID, rs_line_out.inst, rs_line_out.busy, rs_line_out.V1, rs_line_out.V2);
+        $monitor("time:%4.0f clock:%b not_ready:%b rs_line_T:%h rs_line_T1:%h rs_line_T2:%h rs_line_inst_rs1:%h rs_line_inst_rs2:%h busy:%h V1:%h V2:%h reset:%h;",
+                $time, clock, not_ready_out, rs_line_out.T, rs_line_out.T1, rs_line_out.T2, rs_line_out.inst.r.rs1, rs_line_out.inst.r.rs2, rs_line_out.busy, rs_line_out.V1, rs_line_out.V2, reset);
         clock   = 0;
         reset   = 1;
         enable  = 1;
         clear   = 0;
-        //squash_flag = 0;
-        other_dest_reg1 = 5'b00000;
-        other_dest_reg2 = 5'b00000;
+        other_dest_reg1 = 0;
+        other_dest_reg2 = 0;
         line_id = 0;
         other_T1 = 0;
         other_T2 = 0;
@@ -88,45 +85,54 @@ module testbench;
             1'b0     //rs2_insn
         };
 
-        mt_packet_in.T1_plus = 0;
-        mt_packet_in.T2_plus = 0;
-        mt_packet_in.T1      = {$clog2(`ROBLEN){1'b0}};
-        mt_packet_in.T2      = {$clog2(`ROBLEN){1'b0}};
-        mt_packet_in.valid1  = 0;
-        mt_packet_in.valid2  = 0;
-
-        rob_packet_in.V1     = {`XLEN{1'b0}};
-        rob_packet_in.V2     = {`XLEN{1'b0}};
-        rob_packet_in.T      = {$clog2(`ROBLEN){1'b0}};
-        rob_packet_in.valid1 = 0;
-        rob_packet_in.valid2 = 0;
-
-        cdb_packet_in[0].tag   = {$clog2(`ROBLEN){1'b0}};
-        cdb_packet_in[0].value = {`XLEN{1'b0}};
-        cdb_packet_in[0].valid = 0;
-
-        cdb_packet_in[1].tag   = {$clog2(`ROBLEN){1'b0}};
-        cdb_packet_in[1].value = {`XLEN{1'b0}};
-        cdb_packet_in[1].valid = 0;
-    
-        cdb_packet_in[2].tag   = {$clog2(`ROBLEN){1'b0}};
-        cdb_packet_in[2].value = {`XLEN{1'b0}};
-        cdb_packet_in[2].valid = 0;
-
         @(negedge clock);
         @(negedge clock);
         reset = 0;
 
         /////////////////////////////////////////////////////////////////////////
         //                                                                     //
-        // test 1: Pass an INST ADD to one RS line                             //
+        // test 1: rs1 RAW, rs2 can from CDB: f or ROB: ffff_ffff              //
         //                                                                     //
         /////////////////////////////////////////////////////////////////////////
 
-        dp_packet_in  = {
-                32'hdead_face,        // ADD
-                {`XLEN{1'b0}},    // PC + 4
-                {`XLEN{1'b0}},     // PC
+	    // MT
+        mt_packet_in.T1_plus = 0;
+        mt_packet_in.T2_plus = 1;
+        mt_packet_in.T1      = {$clog2(`ROBLEN){1'b0}};
+        // mt_packet_in.T2      = {$clog2(`ROBLEN){1'b0}};
+        mt_packet_in.T2      = 3'b111;
+        mt_packet_in.valid1  = 1;// ?
+        mt_packet_in.valid2  = 1;
+
+
+        // ROB
+        rob_packet_in.V1     = {`XLEN{1'b0}};
+        // rob_packet_in.V2     = {`XLEN{1'b0}};
+        rob_packet_in.V2     = {`XLEN'hffffffff};
+        rob_packet_in.T      = {$clog2(`ROBLEN){1'b0}};
+        rob_packet_in.valid1 = 0;
+        rob_packet_in.valid2 = 1;
+
+
+        // CDB
+        cdb_packet_in[0].tag   = {$clog2(`ROBLEN){1'b0}};
+        cdb_packet_in[0].value = {`XLEN{1'b0}};
+        cdb_packet_in[0].valid = 0;
+
+        //cdb_packet_in[1].tag   = {$clog2(`ROBLEN){1'b0}};
+        cdb_packet_in[1].tag   = 3'b111;
+        //cdb_packet_in[1].value = {`XLEN{1'b0}};
+        cdb_packet_in[1].value = 4'b1111; // f
+        cdb_packet_in[1].valid = 0; // 应该比rob优先(同时需要maptable的Tag和cdb_packet_in[1].tag匹配)
+    
+        cdb_packet_in[2].tag   = {$clog2(`ROBLEN){1'b0}};
+        cdb_packet_in[2].value = {`XLEN{1'b0}};
+        cdb_packet_in[2].valid = 0;
+
+            dp_packet_in  = {
+                32'h002081b3,        // add x3, x1, x2
+                {`XLEN{1'b0}},       // PC + 4
+                {`XLEN{1'b0}},       // PC
 
                 {`XLEN'h0000_0001},    // reg A value 
                 {`XLEN'h0000_0002},    // reg B value
@@ -146,84 +152,90 @@ module testbench;
                 1'b1,    //valid
                 1'b1,    //rs1_insn
                 1'b1     //rs2_insn
-        };
+            };
 
-		@(negedge clock);
-		enable = 0;
-		@(negedge clock); 
+            other_dest_reg1 = 5'b00001; // x1 should match
+            other_dest_reg2 = 5'b00011; // x2 not match
+            other_T1 = 3'b001; // should match and appear in rs_line tag1
+            other_T2 = 3'b010; // no match and not in rs_line tag2
+            my_position = 2'b10;
+
+            $display("rs1 RAW, value doesnt matter, rs2 from ROB: ffff_ffff");
+
+            @(negedge clock);
+	        enable = 0;
+
+            if (rs_line_out.inst.r.rs1==other_dest_reg1) begin
+                $display("rs1 match");
+            end else begin
+                $display("rs1 not match");
+            end
+            if (rs_line_out.inst.r.rs2==other_dest_reg2) begin
+                $display("rs2 match");
+            end else begin
+                $display("rs2 not match");
+            end
+
+            @(negedge clock);
+            @(negedge clock);
+
+
+
+
         /////////////////////////////////////////////////////////////////////////
         //                                                                     //
-        // test 2: enable = 0                                                  //
+        // test 2: No hazard and can ISSUE                                     //
         //                                                                     //
         /////////////////////////////////////////////////////////////////////////
-		dp_packet_in  = {
-                $random,        // ADD
-                {`XLEN{1'b0}},    // PC + 4
-                {`XLEN{1'b0}},     // PC
-
-                $random,    // reg A value 
-                $random,    // reg B value
-
-                OPA_IS_RS1,     // ALU opa mux select (ALU_OPA_xxx *)
-                OPB_IS_RS2,     // ALU opb mux select (ALU_OPB_xxx *)
-
-                5'b11000,    // destination (writeback) register index
-                ALU_ADD,     // ALU function select (ALU_xxx *)
-                1'b0,    //rd_mem
-                1'b0,    //wr_mem
-                1'b0,    //cond
-                1'b0,    //uncond
-                1'b0,    //halt
-                1'b0,    //illegal
-                1'b0,    //csr_op
-                1'b1,    //valid
-                1'b1,    //rs1_insn
-                1'b1     //rs2_insn
-        };
-            
-
+	    reset = 1;
+        clear = 1;
+	    @(negedge clock);
         @(negedge clock);
-        /////////////////////////////////////////////////////////////////////////
-        //                                                                     //
-        // test 3: Clear the line                                              //
-        //                                                                     //
-        /////////////////////////////////////////////////////////////////////////
-		clear = 1;
-		@(negedge clock);
-		clear = 0;
-		@(negedge clock);
-		$display("The line has been cleared!");
-		$display("not_ready:%b  rs_line_ID:%h  rs_line_inst:%h  busy:%h  V1:%h V2:%h",
-                not_ready_out, rs_line_out.RSID, rs_line_out.inst, rs_line_out.busy, rs_line_out.V1, rs_line_out.V2);
-				
-		@(negedge clock);		
-		/////////////////////////////////////////////////////////////////////////
-        //                                                                     //
-        // test 4: CDB TAG TEST                                                //
-        //                                                                     //
-        /////////////////////////////////////////////////////////////////////////
-		
-				
-		enable = 1;
-		other_dest_reg1 = 5'b00001;
-        other_dest_reg2 = 5'b00010;
-		other_T1 = 6'b000001;
-        other_T2 = 6'b000010;
-		my_position = 2'b11;
-		@(negedge clock);
-		$display("Cycle 1");
-		dp_packet_in  = {
-                32'h0020_81b3,        // R3 = R1 + R2
-                {`XLEN{1'b0}},    // PC + 4
-                {`XLEN{1'b0}},     // PC
+        reset = 0;
+        clear = 0;
+        enable = 1;
 
-                {`XLEN'h1111_1111},    // reg A value 
-                {`XLEN'hcccc_cccc},    // reg B value
+        // MT
+        mt_packet_in.T1_plus = 0;
+        mt_packet_in.T2_plus = 0;
+        mt_packet_in.T1      = {$clog2(`ROBLEN){1'b0}};
+        mt_packet_in.T2      = {$clog2(`ROBLEN){1'b0}};
+        mt_packet_in.valid1  = 0;
+        mt_packet_in.valid2  = 0;
+
+
+        // ROB
+        rob_packet_in.V1     = {`XLEN{1'b0}};
+        rob_packet_in.V2     = {`XLEN{1'b0}};
+        rob_packet_in.T      = {$clog2(`ROBLEN){1'b0}};
+        rob_packet_in.valid1 = 0;
+        rob_packet_in.valid2 = 0;
+
+
+        // CDB
+        cdb_packet_in[0].tag   = {$clog2(`ROBLEN){1'b0}};
+        cdb_packet_in[0].value = {`XLEN{1'b0}};
+        cdb_packet_in[0].valid = 0;
+
+        cdb_packet_in[1].tag   = {$clog2(`ROBLEN){1'b0}};
+        cdb_packet_in[1].value = {`XLEN{1'b0}};
+        cdb_packet_in[1].valid = 0; 
+        cdb_packet_in[2].tag   = {$clog2(`ROBLEN){1'b0}};
+        cdb_packet_in[2].value = {`XLEN{1'b0}};
+        cdb_packet_in[2].valid = 0;
+
+            dp_packet_in  = {
+                32'h002081b3,        // add x3, x1, x2
+                {`XLEN{1'b0}},       // PC + 4
+                {`XLEN{1'b0}},       // PC
+
+                {`XLEN'h0000_0001},    // reg A value 
+                {`XLEN'h0000_0002},    // reg B value
 
                 OPA_IS_RS1,     // ALU opa mux select (ALU_OPA_xxx *)
                 OPB_IS_RS2,     // ALU opb mux select (ALU_OPB_xxx *)
 
-                5'b10101,    // destination (writeback) register index
+                5'b00010,    // destination (writeback) register index
                 ALU_ADD,     // ALU function select (ALU_xxx *)
                 1'b0,    //rd_mem
                 1'b0,    //wr_mem
@@ -236,175 +248,33 @@ module testbench;
                 1'b1,    //rs1_insn
                 1'b1     //rs2_insn
             };
-			
-		mt_packet_in.T1_plus = 0;
-        mt_packet_in.T2_plus = 0;
-        mt_packet_in.T1      = 6'b000001;
-        mt_packet_in.T2      = 6'b000010;
-        mt_packet_in.valid1  = 1;
-        mt_packet_in.valid2  = 1;
-		
-		
-		rob_packet_in.V1     = {`XLEN{1'b0}};
-        rob_packet_in.V2     = {`XLEN{1'b0}};
-        rob_packet_in.T      = 6'b000011;
-        rob_packet_in.valid1 = 0;
-        rob_packet_in.valid2 = 0;
 
-        cdb_packet_in[0].tag   = {$clog2(`ROBLEN){1'b0}};
-        cdb_packet_in[0].value = {`XLEN{1'b0}};
-        cdb_packet_in[0].valid = 0;
+            other_dest_reg1 = 5'b00011; // x1 not match
+            other_dest_reg2 = 5'b00011; // x2 not match
+            other_T1 = 3'b001; 
+            other_T2 = 3'b010; 
+            my_position = 2'b10;
 
-        cdb_packet_in[1].tag   = {$clog2(`ROBLEN){1'b0}};
-        cdb_packet_in[1].value = {`XLEN{1'b0}};
-        cdb_packet_in[1].valid = 0;
-    
-        cdb_packet_in[2].tag   = {$clog2(`ROBLEN){1'b0}};
-        cdb_packet_in[2].value = {`XLEN{1'b0}};
-        cdb_packet_in[2].valid = 0;
-		
-		@(negedge clock);
-		$display("Cycle 2");
-		enable = 0;
-		
-		/////////////////////////////////////////////////////////////////////////
-        //                                                                     //
-        // test 4                                                              //
-        //                                                                     //
-        /////////////////////////////////////////////////////////////////////////
-		mt_packet_in.T1_plus = 1;
-        mt_packet_in.T2_plus = 0;
-        mt_packet_in.T1      = 6'b000001;
-        mt_packet_in.T2      = 6'b000010;
-        mt_packet_in.valid1  = 1;
-        mt_packet_in.valid2  = 1;
-		
-	    rob_packet_in.V1     = {`XLEN{1'b0}};
-        rob_packet_in.V2     = {`XLEN{1'b0}};
-        rob_packet_in.T      = 6'b000011;
-        rob_packet_in.valid1 = 0;
-        rob_packet_in.valid2 = 0;
+            $display("No hazard and can ISSUE");
 
-        cdb_packet_in[0].tag   = 6'b000001;
-        cdb_packet_in[0].value = 32'haaaa_0000;
-        cdb_packet_in[0].valid = 1;
+            @(negedge clock);
+	    enable = 0;
 
-        cdb_packet_in[1].tag   = {$clog2(`ROBLEN){1'b0}};
-        cdb_packet_in[1].value = {`XLEN{1'b0}};
-        cdb_packet_in[1].valid = 0;
-    
-        cdb_packet_in[2].tag   = {$clog2(`ROBLEN){1'b0}};
-        cdb_packet_in[2].value = {`XLEN{1'b0}};
-        cdb_packet_in[2].valid = 0;
-		
-		
-		@(negedge clock);
-		$display("Cycle 3");
-		/////////////////////////////////////////////////////////////////////////
-        //                                                                     //
-        // test 4:                                                             //
-        //                                                                     //
-        /////////////////////////////////////////////////////////////////////////
-		mt_packet_in.T1_plus = 1;
-        mt_packet_in.T2_plus = 1;
-        mt_packet_in.T1      = 6'b000001;
-        mt_packet_in.T2      = 6'b000010;
-        mt_packet_in.valid1  = 1;
-        mt_packet_in.valid2  = 1;
-		
-	    rob_packet_in.V1     = {`XLEN{1'b0}};
-        rob_packet_in.V2     = {`XLEN{1'b0}};
-        rob_packet_in.T      = 6'b000011;
-        rob_packet_in.valid1 = 0;
-        rob_packet_in.valid2 = 0;
+            if (rs_line_out.inst.r.rs1==other_dest_reg1) begin
+                $display("rs1 match");
+            end else begin
+                $display("rs1 not match");
+            end
+            if (rs_line_out.inst.r.rs2==other_dest_reg2) begin
+                $display("rs2 match");
+            end else begin
+                $display("rs2 not match");
+            end
 
-        cdb_packet_in[0].tag   = {$clog2(`ROBLEN){1'b0}};
-        cdb_packet_in[0].value = {`XLEN{1'b0}};
-        cdb_packet_in[0].valid = 0;
-
-        cdb_packet_in[1].tag   = 6'b000010;
-        cdb_packet_in[1].value = 32'h0000_bbbb;
-        cdb_packet_in[1].valid = 1;
-    
-        cdb_packet_in[2].tag   = {$clog2(`ROBLEN){1'b0}};
-        cdb_packet_in[2].value = {`XLEN{1'b0}};
-        cdb_packet_in[2].valid = 0;
-		@(negedge clock);
-		clear = 1;
-		
-		@(negedge clock);
-		clear = 0;
-		$display("test 4 complete, rs_line is cleared");
-		/////////////////////////////////////////////////////////////////////////
-        //                                                                     //
-        // test 5:    Value from ROB                                            //
-        //                                                                     //
-        /////////////////////////////////////////////////////////////////////////
-		$display("test 5 begin, value from ROB");
-		enable = 1;
-		other_dest_reg1 = 5'b00001;
-        other_dest_reg2 = 5'b00010;
-		other_T1 = 6'b000001;
-        other_T2 = 6'b000010;
-		my_position = 2'b11;
-		@(negedge clock);
-
-		dp_packet_in  = {
-                32'h0020_81b3,        //  R3 = R1 + R2
-                {`XLEN{1'b0}},    // PC + 4
-                {`XLEN{1'b0}},     // PC
-
-                {`XLEN'h1111_1111},    // reg A value 
-                {`XLEN'hcccc_cccc},    // reg B value
-
-                OPA_IS_RS1,     // ALU opa mux select (ALU_OPA_xxx *)
-                OPB_IS_RS2,     // ALU opb mux select (ALU_OPB_xxx *)
-
-                5'b10101,    // destination (writeback) register index
-                ALU_ADD,     // ALU function select (ALU_xxx *)
-                1'b0,    //rd_mem
-                1'b0,    //wr_mem
-                1'b0,    //cond
-                1'b0,    //uncond
-                1'b0,    //halt
-                1'b0,    //illegal
-                1'b0,    //csr_op
-                1'b1,    //valid
-                1'b1,    //rs1_insn
-                1'b1     //rs2_insn
-            };
-			
-		mt_packet_in.T1_plus = 0;
-        mt_packet_in.T2_plus = 0;
-        mt_packet_in.T1      = 6'b000001;
-        mt_packet_in.T2      = 6'b000010;
-        mt_packet_in.valid1  = 1;
-        mt_packet_in.valid2  = 1;
-		
-		
-	    rob_packet_in.V1     = 32'haaaa_0000;
-        rob_packet_in.V2     = 32'h0000_bbbb;
-        rob_packet_in.T      = 6'b000011;
-        rob_packet_in.valid1 = 1;
-        rob_packet_in.valid2 = 1;
-
-        cdb_packet_in[0].tag   = {$clog2(`ROBLEN){1'b0}};
-        cdb_packet_in[0].value = {`XLEN{1'b0}};
-        cdb_packet_in[0].valid = 0;
-
-        cdb_packet_in[1].tag   = {$clog2(`ROBLEN){1'b0}};
-        cdb_packet_in[1].value = {`XLEN{1'b0}};
-        cdb_packet_in[1].valid = 0;
-    
-        cdb_packet_in[2].tag   = {$clog2(`ROBLEN){1'b0}};
-        cdb_packet_in[2].value = {`XLEN{1'b0}};
-        cdb_packet_in[2].valid = 0;
-		@(negedge clock);
-		clear = 1;
-		@(negedge clock);
-		clear = 0;
-		$display("test 5 complete");
-        $display("@@@ Passed \n ");    
+            @(negedge clock);
+            @(negedge clock);	
+	
+        $display("Test complete! \n ");    
         $finish;
     end
 
