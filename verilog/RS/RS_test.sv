@@ -5,12 +5,12 @@ module testbench;
     logic                               clock, reset, enable;
     logic                               squash_flag;
     MT_RS_PACKET          [2:0]         mt_rs_in;
-    DP_IS_PACKET          [2:0]         dp_packet_in;
+    DP_PACKET          [2:0]         dp_packet_in;
     ROB_RS_PACKET         [2:0]         rob_in; 
     CDB_RS_PACKET         [2:0]         cdb_in;
    
     RS_IS_PACKET          [2:0]         is_packet_out;
-    RS_DP_PACKET                        dp_packet_out;    
+    RS_IF_PACKET                        dp_packet_out;    
 
 
     RS DUT (
@@ -136,7 +136,9 @@ module testbench;
                 1'b0,    //csr_op
                 1'b1,    //valid
                 1'b0,    //rs1_insn
-                1'b0     //rs2_insn
+                1'b0,     //rs2_insn
+                1'b1,
+                FUNC_ALU
             };
 
             dp_packet_in[1]  = {
@@ -161,7 +163,9 @@ module testbench;
                 1'b0,    //csr_op
                 1'b1,     //valid
                 1'b0,    //rs1_insn
-                1'b0     //rs2_insn
+                1'b0,    //rs2_insn
+                1'b1,
+                FUNC_ALU
             };
 
             dp_packet_in[2]  = {
@@ -186,7 +190,9 @@ module testbench;
                 1'b0,    //csr_op
                 1'b1,    //valid
                 1'b0,    //rs1_insn
-                1'b0     //rs2_insn
+                1'b0,    //rs2_insn
+                1'b1,
+                FUNC_ALU
             };
 
         
@@ -261,6 +267,17 @@ module testbench;
                     dp_packet_in[0].inst,dp_packet_in[1].inst,dp_packet_in[2].inst );
 
             @(negedge clock);
+            for(integer k = 0; k < `N;k ++) begin
+                dp_packet_in[k] = 0;
+                dp_packet_in[k].inst = `NOP;
+                dp_packet_in[k].opa_select = OPA_IS_RS1;
+                dp_packet_in[k].opb_select = OPB_IS_RS2;
+                dp_packet_in[k].alu_func = ALU_ADD;
+                dp_packet_in[k].rs1_instruction = 1'b0;
+                dp_packet_in[k].rs2_instruction = 1'b0;
+                dp_packet_in[k].valid = 1'b0;
+                dp_packet_in[k].func_unit = FUNC_ALU;
+            end
             @(negedge clock);
             @(negedge clock);
             @(negedge clock);
@@ -297,7 +314,9 @@ module testbench;
                     1'b0,    //csr_op
                     1'b1,    //valid
                     1'b0,    //rs1_inst
-                    1'b0     //rs2_inst
+                    1'b0,     //rs2_inst
+                    1'b1,
+                    FUNC_ALU
                 };
 
                 mt_rs_in[k]      = {
@@ -327,6 +346,17 @@ module testbench;
                     dp_packet_in[0].inst,dp_packet_in[1].inst,dp_packet_in[2].inst );
 
             @(negedge clock);
+            for(integer k = 0; k < `N;k ++) begin
+                dp_packet_in[k] = 0;
+                dp_packet_in[k].inst = `NOP;
+                dp_packet_in[k].opa_select = OPA_IS_RS1;
+                dp_packet_in[k].opb_select = OPB_IS_RS2;
+                dp_packet_in[k].alu_func = ALU_ADD;
+                dp_packet_in[k].rs1_instruction = 1'b0;
+                dp_packet_in[k].rs2_instruction = 1'b0;
+                dp_packet_in[k].valid = 1'b0;
+                dp_packet_in[k].func_unit = FUNC_ALU;
+            end
             @(negedge clock);
             @(negedge clock);
             @(negedge clock);
@@ -365,7 +395,9 @@ module testbench;
                     1'b0,    //csr_op
                     1'b1,    //valid
                     1'b1,    //rs1_insn
-                    1'b1     //rs2_insn
+                    1'b1,    //rs2_insn
+                    1'b1,
+                    FUNC_ALU
                 };
 
                 mt_rs_in[k]      = {
@@ -395,11 +427,24 @@ module testbench;
             $display("dp_packet_in[0].inst:%h, dp_packet_in[1].inst:%h, dp_packet_in[2].inst:%h", 
                     dp_packet_in[0].inst,dp_packet_in[1].inst,dp_packet_in[2].inst );
             @(negedge clock);
+            /*
+            for(integer k = 0; k < `N;k ++) begin
+                dp_packet_in[k] = 0;
+                dp_packet_in[k].inst = `NOP;
+                dp_packet_in[k].opa_select = OPA_IS_RS1;
+                dp_packet_in[k].opb_select = OPB_IS_RS2;
+                dp_packet_in[k].alu_func = ALU_ADD;
+                dp_packet_in[k].rs1_instruction = 1'b0;
+                dp_packet_in[k].rs2_instruction = 1'b0;
+                dp_packet_in[k].valid = 1'b0;
+                dp_packet_in[k].func_unit = FUNC_ALU;
+            end
+            //@(negedge clock);
+            //@(negedge clock);
+            //@(negedge clock);
+            //@(negedge clock);
             @(negedge clock);
-            @(negedge clock);
-            @(negedge clock);
-            @(negedge clock);
-            @(negedge clock);
+            */
         /////////////////////////////////////////////////////////////////////////
         //                                                                     //
         // test 3: ADD + NOP +ADD                                              //
@@ -428,7 +473,9 @@ module testbench;
                 1'b0,    //csr_op
                 1'b1,    //valid
                 1'b1,    //rs1_insn
-                1'b1     //rs2_insn
+                1'b1,    //rs2_insn
+                1'b1,
+                FUNC_ALU
             };
             mt_rs_in[0]      = {
                 {$clog2(`ROBLEN){1'b0}},
@@ -473,7 +520,9 @@ module testbench;
                 1'b0,    //csr_op
                 1'b1,     //valid
                 1'b0,    //rs1_insn
-                1'b0     //rs2_insn
+                1'b0,    //rs2_insn
+                1'b1,
+                FUNC_ALU
             };
             mt_rs_in[1]      = {
                 {$clog2(`ROBLEN){1'b0}},
@@ -518,7 +567,9 @@ module testbench;
                 1'b0,    //csr_op
                 1'b1,    //valid
                 1'b1,    //rs1_insn
-                1'b1     //rs2_insn
+                1'b1,    //rs2_insn
+                1'b1,
+                FUNC_ALU
             };
             mt_rs_in[2]      = {
                 {$clog2(`ROBLEN){1'b0}},
@@ -540,13 +591,27 @@ module testbench;
                 {$clog2(`ROBLEN){1'b0}},
                 1'b0
             };
-
+            $display("dp_packet_in[0].inst:%h, dp_packet_in[1].inst:%h, dp_packet_in[2].inst:%h", 
+                    dp_packet_in[0].inst,dp_packet_in[1].inst,dp_packet_in[2].inst );
             @(negedge clock);
+            /*
+            for(integer k = 0; k < `N;k ++) begin
+                dp_packet_in[k] = 0;
+                dp_packet_in[k].inst = `NOP;
+                dp_packet_in[k].opa_select = OPA_IS_RS1;
+                dp_packet_in[k].opb_select = OPB_IS_RS2;
+                dp_packet_in[k].alu_func = ALU_ADD;
+                dp_packet_in[k].rs1_instruction = 1'b0;
+                dp_packet_in[k].rs2_instruction = 1'b0;
+                dp_packet_in[k].valid = 1'b0;
+                dp_packet_in[k].func_unit = FUNC_ALU;
+            end
+            //@(negedge clock);
+			//@(negedge clock);
+            //@(negedge clock);
+			//@(negedge clock);
             @(negedge clock);
-			@(negedge clock);
-            @(negedge clock);
-			@(negedge clock);
-            @(negedge clock);
+            */
 
         	
             /////////////////////////////////////////////////////////////////////////////////
@@ -578,7 +643,9 @@ module testbench;
                     1'b0,    //csr_op
                     1'b1,    //valid
                     1'b1,    //rs1_insn
-                    1'b1     //rs2_insn
+                    1'b1,    //rs2_insn
+                    1'b1,
+                    FUNC_ALU
                 };
 
                 mt_rs_in[k]      = {
@@ -609,6 +676,17 @@ module testbench;
                     dp_packet_in[0].inst,dp_packet_in[1].inst,dp_packet_in[2].inst );
         
             @(negedge clock);
+            for(integer k = 0; k < `N;k ++) begin
+                dp_packet_in[k] = 0;
+                dp_packet_in[k].inst = `NOP;
+                dp_packet_in[k].opa_select = OPA_IS_RS1;
+                dp_packet_in[k].opb_select = OPB_IS_RS2;
+                dp_packet_in[k].alu_func = ALU_ADD;
+                dp_packet_in[k].rs1_instruction = 1'b0;
+                dp_packet_in[k].rs2_instruction = 1'b0;
+                dp_packet_in[k].valid = 1'b0;
+                dp_packet_in[k].func_unit = FUNC_ALU;
+            end
             @(negedge clock);
 			@(negedge clock);
             @(negedge clock);

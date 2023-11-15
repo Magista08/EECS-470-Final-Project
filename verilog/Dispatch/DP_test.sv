@@ -37,6 +37,7 @@ module testbench;
             end
 
             if (rs_value_show) begin
+                $display("@@@ Incorrect at time %4.0f\n", $time);
                 $display("dp_packet_out[0].rs1_value: %h dp_packet_out[1].rs1_value: %h, dp_packet_out[2].rs1_value: %h", dp_packet_out[0].rs1_value, dp_packet_out[1].rs1_value, dp_packet_out[2].rs1_value);
                 $display("dp_reg_check[0].rs1_value:    %h dp_reg_check[1].rs1_value:    %h, dp_reg_check[2].rs1_value:    %h", dp_reg_check[0].inst, dp_reg_check[1].rs1_value, dp_reg_check[2].rs1_value);
                 $display("dp_packet_out[0].rs2_value: %h dp_packet_out[1].rs2_value: %h, dp_packet_out[2].rs2_value: %h", dp_packet_out[0].rs2_value, dp_packet_out[1].rs2_value, dp_packet_out[2].rs2_value);

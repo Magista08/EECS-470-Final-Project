@@ -10,7 +10,7 @@ module testbench;
     logic   [$clog2(`ROBLEN)-1:0]   other_T1;
     logic   [$clog2(`ROBLEN)-1:0]   other_T2;
     logic           [1:0]           my_position;
-    DP_IS_PACKET 		            dp_packet_in;
+    DP_PACKET 		            dp_packet_in;
     MT_RS_PACKET  	                mt_packet_in;
     ROB_RS_PACKET		            rob_packet_in;
     CDB_RS_PACKET	[2:0]	        cdb_packet_in;

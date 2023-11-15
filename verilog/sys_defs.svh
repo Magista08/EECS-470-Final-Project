@@ -33,8 +33,8 @@
 `define LSQ_SZ xx
 
 // functional units (you should decide if you want more or fewer types of FUs)
-`define NUM_FU_ALU xx
-`define NUM_FU_MULT xx
+`define NUM_FU_ALU 3
+`define NUM_FU_MULT 3
 `define NUM_FU_LOAD xx
 `define NUM_FU_STORE xx
 
@@ -107,7 +107,7 @@ typedef enum logic [1:0] {
 } BUS_COMMAND;
 
 typedef enum logic [1:0] {
-	// FUNC_NOP    = 2'h0,    // no instruction free, DO NOT USE THIS AS DEFAULT CASE!
+	FUNC_NOP    = 2'h0,    // no instruction free, DO NOT USE THIS AS DEFAULT CASE!
 	FUNC_ALU = 2'd1,    // all of the instruction  except mult and load and store
 	FUNC_MUL = 2'd2,    // mult 
 	FUNC_MEM = 2'd3     // load and store
