@@ -16,7 +16,7 @@ for file in $files; do
     # Perform the substitution using sed
     # sed -i 's/"../sys_defs.svh"/"verilog/sys_defs.svh"/g' "$file"
     # sed -i 's/"../ISA.svh"/"verilog/ISA.svh"/g' "$file"
-    sed -i 's/RS_DP_PACKET/RS_IF_PACKET/g' "$file"
+    sed -i 's/RT_PACKET/RT_DP_PACKET/g' "$file"
 done
 
 # Replace the original P3
