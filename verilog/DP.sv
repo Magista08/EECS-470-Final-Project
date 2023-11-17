@@ -1,10 +1,10 @@
-`include "../sys_defs.svh"
+`include "verilog/sys_defs.svh"
 
 module DP(
     // input
     input clock, reset,
     input IF_ID_PACKET [`N-1:0] if_id_packet,
-    input RT_PACKET [`N-1:0] rt_packet,
+    input RT_DP_PACKET [`N-1:0] rt_packet,
 
     // output
     output DP_PACKET [`N-1:0] dp_packet 
@@ -66,8 +66,8 @@ generate
         assign dp_packet[regf].rs2_value = result_2[regf];
 
         // Write
-        assign write_en[regf]    = rt_packet[regf].wr_en;
-        assign write_idxes[regf] = rt_packet[regf].dest_reg_idx;
+        assign write_en[regf]    = rt_packet[regf].valid;
+        assign write_idxes[regf] = rt_packet[regf].retire_reg;
         assign write_data[regf]  = rt_packet[regf].value;
     end
 endgenerate

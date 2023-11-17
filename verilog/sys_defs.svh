@@ -24,8 +24,8 @@
 `define N 3
 
 // sizes
-`define ROBLEN 64
-`define RSLEN 32
+`define ROBLEN 32
+`define RSLEN 16
 //`define PHYS_REG_SZ (32 + `ROB_SZ)
 
 // worry about these later
@@ -108,9 +108,9 @@ typedef enum logic [1:0] {
 
 typedef enum logic [1:0] {
 	FUNC_NOP    = 2'h0,    // no instruction free, DO NOT USE THIS AS DEFAULT CASE!
-	FUNC_ALU = 2'd1,    // all of the instruction  except mult and load and store
-	FUNC_MUL = 2'd2,    // mult 
-	FUNC_MEM = 2'd3     // load and store
+	FUNC_ALU    = 2'h1,    // all of the instruction  except mult and load and store
+	FUNC_MUL   = 2'h2,    // mult 
+	FUNC_MEM    = 2'h3     // load and store
 }FUNC_UNIT;
 
 
@@ -324,10 +324,9 @@ typedef struct packed {
     logic       valid;
     logic       rs1_instruction; // 1: RS1 is in use, 0: RS1 not in use
     logic       rs2_instruction;
+    logic       dest_reg_valid; // 1: des_reg is in use, 0: des_reg not in use
 
-    logic      dest_reg_valid;   // 1: des_reg is in use, 0: des_reg not in use  
-
-    FUNC_UNIT   func_unit;
+   FUNC_UNIT   func_unit;
 } DP_PACKET;
 
 /**
@@ -426,22 +425,17 @@ typedef struct packed {
 
 typedef struct packed {
     // Characteristics for RS
-    logic [$clog2(`ROBLEN)-1:0]  Tag;
+    //logic [$clog2(`ROBLEN)-1:0]  id;
+    logic             busy;//dp, rt
+    logic             value_flag;//dp,cdb,rt
 
-    INST              inst;
-    logic [4:0]       R;
-    logic [`XLEN-1:0] V;
+
+    logic [4:0]       reg_id;//dp
+    logic [`XLEN-1:0] value;// cdb
+    logic             take_branch;//cdb
+    logic [`XLEN-1:0]             NPC;
 } ROB_LINE;
 
-/*
-typedef struct packed{
-    ROB_LINE [`ROBLEN-1:0] line;
-
-    // logic [$clog2(`ROBLEN)-1:0] head;
-    // loigc [$clog2(`ROBLEN)-1:0] tail;
-    
-} ROB_TABLE;
-*/
 
 /*
  * MapTable
@@ -458,9 +452,9 @@ typedef struct packed {
  * Record the finished instr from Complete stage
  */
 typedef struct packed {
-    logic [4:0] R;
     logic [$clog2(`ROBLEN)-1:0] Tag;
-} CDB;
+    logic 	valid;
+} CDB_MT_PACKET;
 
 /*
  * Packet between ROB, RS, Maptable, CDB
@@ -477,10 +471,25 @@ typedef struct packed {
 } ROB_RS_PACKET;//
 
 typedef struct packed {
+    logic [$clog2(`ROBLEN)-1:0]  T;
+    logic   [4:0]                                                           R  ; 
+    logic                                   valid;
+} ROB_MT_PACKET;     //  删除了T1,T2,valid1,valid2
+
+
+typedef struct packed {
     logic [`XLEN-1:0]           value;//modify is_buffer
-    logic [$clog2(`ROBLEN)-1:0] tag;//CDBID
+    logic [$clog2(`ROBLEN)-1:0] tag;//ROBID
     logic 				 	    valid;
 } CDB_RS_PACKET;
+
+typedef struct packed {
+    logic [`XLEN-1:0]           value;//modify is_buffer
+    logic [$clog2(`ROBLEN)-1:0] tag;//ROBID
+    logic 				 	    valid;
+    logic                              take_branch;
+    logic  [`XLEN-1:0]          NPC;               
+} CDB_ROB_PACKET;
 
 typedef struct packed {
     logic  [$clog2(`ROBLEN)-1:0] T1;//ROBID
@@ -495,6 +504,20 @@ typedef struct packed {
     logic					     valid1; //valid = 1 means there is inst. in the mt
     logic					     valid2;  
 } MT_RS_PACKET;//
+
+typedef struct packed {
+    logic  [$clog2(`ROBLEN)-1:0] T1;//ROBID
+    logic  [$clog2(`ROBLEN)-1:0] T2;
+
+    // T_pluse indicates 2 conditions: 
+    //1.source register in MT is empty(usually for the 1st overall)
+    //2.ROB# with + bit
+    logic                        T1_plus; 
+    logic                        T2_plus;
+
+    logic					     valid1; //valid = 1 means there is inst. in the mt
+    logic					     valid2;  
+} MT_ROB_PACKET;//
 
 typedef struct packed {
     DP_PACKET [2:0] 			packet;
@@ -535,26 +558,51 @@ typedef struct packed {
     FUNC_UNIT   func_unit;
 } RS_IS_PACKET;
 
+`define CompBuff_SIZE (`NUM_FU_ALU + `NUM_FU_MULT)
+
+typedef struct packed {
+    logic [$clog2(`ROBLEN)-1:0]    T;
+    logic [`XLEN-1:0]              value; // also bp_pc
+    logic                          valid;
+    logic                          branch_taken;
+    logic [`XLEN-1:0]              NPC; // required by them~
+} EX_PACKET;
+
+typedef struct packed {
+    logic [`NUM_FU_ALU-1:0]        ALU_empty;
+    logic [`NUM_FU_MULT-1:0]         MULT_empty;
+} FU_EMPTY_PACKET;
+
+
 typedef struct packed {
     logic [1:0]				empty_num;//to DP
 } RS_IF_PACKET;
+
+typedef struct packed {
+    logic [1:0]				empty_num;//to DP
+} ROB_IF_PACKET;
 
 typedef struct packed{
     logic [4:0] dest_reg_idx;
     logic [$clog2(`ROBLEN)-1:0] T;
 } CURRENT_MT_TABLE;
 
-typedef struct packed {
-	logic [4:0] 	  			  dest_reg_idx;  // Retired register
-	logic [`XLEN-1:0] 			  value;// Value for retired register
-	logic [$clog2(`ROBLEN)-1:0] retire_tag;  // #ROB for retired register
-    logic                         valid;       // cp_bit
-	logic 			  			  wr_en;	   // 0 if rd is `ZERO_REG
-	logic						  illegal;
-	logic						  halt;
-	logic [`XLEN-1:0]             PC;
-} RT_PACKET;
 
+
+typedef struct packed {
+    logic [4:0] 	  			  dest_reg_idx;  // Retired register
+    logic [`XLEN-1:0] 			  value;// Value for retired register
+    logic                              take_branch;
+    logic [`XLEN-1:0]          NPC;
+    logic                              valid;
+} ROB_RT_PACKET;
+
+typedef struct packed {
+    logic [4:0] 	  			  retire_reg; // Retired register
+    logic [`XLEN-1:0] 			  value; // Value for retired register
+    logic                                                  valid;
+} RT_DP_PACKET;
 
 `endif // __SYS_DEFS_SVH__
+
 

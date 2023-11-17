@@ -7,14 +7,14 @@
 //                                                                     //
 /////////////////////////////////////////////////////////////////////////
 
-`include "../sys_defs.svh"
+`include "verilog/sys_defs.svh"
 
 // P4 TODO: update this with the new parameters from sys_defs
 // module regfile (
 //     input             clock, // system clock
 //     // note: no system reset, register values must be written before they can be read
 //     input [`N-1:0] [4:0]              read_idx_1, read_idx_2,
-//     input RT_PACKET [`N-1:0] rt_packets,
+//     input RT_DP_PACKET [`N-1:0] rt_packets,
 
 //     output logic [`N-1] [`XLEN-1:0] read_out_1,
 //     output logic [`N-1] [`XLEN-1:0] read_out_2

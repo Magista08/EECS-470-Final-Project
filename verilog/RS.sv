@@ -1,4 +1,4 @@
-`include "../sys_defs.svh"
+`include "verilog/sys_defs.svh"
 
 module PSEL (
     input logic [`RSLEN-1:0]     req0,
@@ -40,7 +40,7 @@ module RS (
     input MT_RS_PACKET [2:0]  mt_packet_in,
     input ROB_RS_PACKET [2:0] rob_packet_in,
     input CDB_RS_PACKET [2:0] cdb_packet_in,
-    //input IS_RS_PACKET	  is_packet_in,
+    input FU_EMPTY_PACKET	  fu_empty_packet,
    
     output RS_IS_PACKET [2:0] is_packet_out,
     output RS_IF_PACKET       dp_packet_out//to DP
@@ -69,6 +69,12 @@ module RS (
     logic [`RSLEN-1:0]                       out_busy;
 
     logic [2:0] [`RSLEN-1:0]    rs_is_posi_line;
+
+    logic [1:0]                 alu_empty_count;
+    logic [1:0]                 mult_empty_count;
+    logic [$clog2(`RSLEN):0]                 alu_num;
+    logic [$clog2(`RSLEN):0]                 mult_num;
+    logic [`RSLEN-1:0]    masked_not_ready;
     
 
 
@@ -80,9 +86,9 @@ module RS (
         
         for (i=0; i<`RSLEN; i++) begin
 	        // whether select
-            assign sel_buffer[i] = slots[0][i] ? 2 :
+            assign sel_buffer[i] = slots[0][i] ? 0 :
                                    slots[1][i] ? 1 :
-                                   slots[2][i] ? 0 : 3;
+                                   slots[2][i] ? 2 : 3;
             assign read_inst_sig[i] = (sel_buffer[i] != 3) ? 1'b1 : 1'b0;
             assign other_T1[i] = ((sel_buffer[i] == 1) || (sel_buffer[i] == 2)) ? rob_packet_in[0].T : 0;
             assign other_T2[i] = (sel_buffer[i] == 2) ? rob_packet_in[1].T : 0;
@@ -118,10 +124,31 @@ module RS (
         end
     endgenerate
 
+    always_comb begin
+        alu_empty_count = 0;
+	alu_num = 0;
+	mult_empty_count = 0;
+	mult_num = 0;
+        for (int n = 0; n < 3; n++) begin
+            if (fu_empty_packet.ALU_empty[n]) begin
+                alu_empty_count = alu_empty_count + 1;
+            end
+	    if (fu_empty_packet.MULT_empty[n]) begin
+                mult_empty_count = mult_empty_count + 1;
+            end
+        end
+	for (int l = 0; l < `RSLEN; l++) begin
+	    alu_num = (~not_ready[l] && (rs_table[l].func_unit == FUNC_ALU)) ? alu_num + 1 : alu_num;
+	    mult_num = (~not_ready[l] && (rs_table[l].func_unit == FUNC_MUL)) ? mult_num + 1 : mult_num;
+	    masked_not_ready[l] = (not_ready[l]) ? 1 : 
+		(((alu_num > alu_empty_count) && (rs_table[l].func_unit == FUNC_ALU)) || ((mult_num > mult_empty_count) && (rs_table[l].func_unit == FUNC_MUL))) ? 1 : 0;
+	end
+    end
+
 
     PSEL is_psel(
         // input
-        .req0(not_ready),
+        .req0(masked_not_ready),
 
         // output
         .gnt0(rs_is_posi[0]),
@@ -162,9 +189,10 @@ module RS (
                     1'b0,                    // cond_branch
                     1'b0,                    // uncond_branch
                     1'b0,                    // halt
-                    1'b0,                    // illegal
+                    1'b1,                    // illegal
                     1'b0,                    // csr_op
-                    1'b0                     // valid
+                    1'b0,                     // valid
+		    FUNC_NOP			//func_unit
                 };
         for (int i=0; i<`RSLEN; i++) begin
             // FU detect hazard
@@ -189,12 +217,14 @@ module RS (
                 is_packet_out[0].cond_branch   = rs_table[i].cond_branch;
                 is_packet_out[0].uncond_branch = rs_table[i].uncond_branch;
                 is_packet_out[0].halt          = rs_table[i].halt;
-                is_packet_out[0].illegal       = rs_table[i].illegal;
+                is_packet_out[0].illegal       = 1'b0;
                 is_packet_out[0].csr_op        = rs_table[i].csr_op;
                 is_packet_out[0].valid         = rs_table[i].valid;
+		is_packet_out[0].func_unit     = rs_table[i].func_unit;
             end 
         end
-        // $display("not_ready = %b", not_ready); 
+        //$display("not_ready = %b", not_ready); 
+	//$display("masked_not_ready = %b", masked_not_ready); 
     end
 
     always_comb begin
@@ -218,9 +248,10 @@ module RS (
                     1'b0,                    // cond_branch
                     1'b0,                    // uncond_branch
                     1'b0,                    // halt
-                    1'b0,                    // illegal
+                    1'b1,                    // illegal
                     1'b0,                    // csr_op
-                    1'b0                     // valid
+                    1'b0,                     // valid
+		    FUNC_NOP                 //func_unit
                 };
         for (int j=0; j<`RSLEN; j++) begin
             // FU detect hazard
@@ -245,9 +276,10 @@ module RS (
                 is_packet_out[1].cond_branch   = rs_table[j].cond_branch;
                 is_packet_out[1].uncond_branch = rs_table[j].uncond_branch;
                 is_packet_out[1].halt          = rs_table[j].halt;
-                is_packet_out[1].illegal       = rs_table[j].illegal;
+                is_packet_out[1].illegal       = 1'b0;
                 is_packet_out[1].csr_op        = rs_table[j].csr_op;
                 is_packet_out[1].valid         = rs_table[j].valid;
+		is_packet_out[1].func_unit     = rs_table[j].func_unit;
             end 
         end
         // $display("not_ready = %b", not_ready); 
@@ -274,9 +306,10 @@ module RS (
                     1'b0,                    // cond_branch
                     1'b0,                    // uncond_branch
                     1'b0,                    // halt
-                    1'b0,                    // illegal
+                    1'b1,                    // illegal
                     1'b0,                    // csr_op
-                    1'b0                     // valid
+                    1'b0,                     // valid
+	 	    FUNC_NOP                 //func_unit
                 };
         for (int k=0; k<`RSLEN; k++) begin
             // FU detect hazard
@@ -301,9 +334,10 @@ module RS (
                 is_packet_out[2].cond_branch   = rs_table[k].cond_branch;
                 is_packet_out[2].uncond_branch = rs_table[k].uncond_branch;
                 is_packet_out[2].halt          = rs_table[k].halt;
-                is_packet_out[2].illegal       = rs_table[k].illegal;
+                is_packet_out[2].illegal       = 1'b0;
                 is_packet_out[2].csr_op        = rs_table[k].csr_op;
                 is_packet_out[2].valid         = rs_table[k].valid;
+		is_packet_out[2].func_unit     = rs_table[k].func_unit;
             end 
         end
         // $display("not_ready = %b", not_ready); 
