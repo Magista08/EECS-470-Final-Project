@@ -17,16 +17,16 @@
 
 // these link to the pipeline_print.c file in this directory, and are used below to print
 // detailed output to the pipeline_output_file, initialized by open_pipeline_output_file()
-// import "DPI-C" function void open_pipeline_output_file(string file_name);
-// import "DPI-C" function void print_header(string str);
-// import "DPI-C" function void print_cycles();
-// import "DPI-C" function void print_stage(string div, int inst, int npc, int valid_inst);
-// import "DPI-C" function void print_reg(int wb_reg_wr_data_out_hi, int wb_reg_wr_data_out_lo,
-//                                        int wb_reg_wr_idx_out, int wb_reg_wr_en_out);
-// import "DPI-C" function void print_membus(int proc2mem_command, int mem2proc_response,
-//                                           int proc2mem_addr_hi, int proc2mem_addr_lo,
-//                                           int proc2mem_data_hi, int proc2mem_data_lo);
-// import "DPI-C" function void print_close();
+import "DPI-C" function void open_pipeline_output_file(string file_name);
+import "DPI-C" function void print_header(string str);
+import "DPI-C" function void print_cycles();
+import "DPI-C" function void print_stage(string div, int inst, int npc, int valid_inst);
+import "DPI-C" function void print_reg(int wb_reg_wr_data_out_hi, int wb_reg_wr_data_out_lo,
+                                        int wb_reg_wr_idx_out, int wb_reg_wr_en_out);
+import "DPI-C" function void print_membus(int proc2mem_command, int mem2proc_response,
+                                           int proc2mem_addr_hi, int proc2mem_addr_lo,
+                                           int proc2mem_data_hi, int proc2mem_data_lo);
+import "DPI-C" function void print_close();
 
 
 module testbench;
@@ -52,32 +52,27 @@ module testbench;
     logic [3:0]       mem2proc_response;
     logic [63:0]      mem2proc_data;
     logic [3:0]       mem2proc_tag;
-`ifndef CACHE_MODE
+//`ifndef CACHE_MODE
     MEM_SIZE          proc2mem_size;
-`endif
+//`endif
 
-    logic [3:0]       pipeline_completed_insts;
+    logic [2:0][3:0]       pipeline_completed_insts;
     EXCEPTION_CODE    pipeline_error_status;
-    logic [4:0]       pipeline_commit_wr_idx;
-    logic [`XLEN-1:0] pipeline_commit_wr_data;
-    logic             pipeline_commit_wr_en;
-    logic [`XLEN-1:0] pipeline_commit_NPC;
+    logic [2:0][4:0]       pipeline_commit_wr_idx;
+    logic [2:0][`XLEN-1:0] pipeline_commit_wr_data;
+    logic [2:0]            pipeline_commit_wr_en;
+    logic [2:0][`XLEN-1:0] pipeline_commit_NPC;
 
-    // logic [`XLEN-1:0] if_NPC_dbg;
-    // logic [31:0]      if_inst_dbg;
-    // logic             if_valid_dbg;
-    // logic [`XLEN-1:0] if_id_NPC_dbg;
-    // logic [31:0]      if_id_inst_dbg;
-    // logic             if_id_valid_dbg;
-    // logic [`XLEN-1:0] id_ex_NPC_dbg;
-    // logic [31:0]      id_ex_inst_dbg;
-    // logic             id_ex_valid_dbg;
-    // logic [`XLEN-1:0] ex_mem_NPC_dbg;
-    // logic [31:0]      ex_mem_inst_dbg;
-    // logic             ex_mem_valid_dbg;
-    // logic [`XLEN-1:0] mem_wb_NPC_dbg;
-    // logic [31:0]      mem_wb_inst_dbg;
-    // logic             mem_wb_valid_dbg;
+    logic [2:0] [`XLEN-1:0] if_NPC_dbg;
+    logic [2:0] [31:0]      if_inst_dbg;
+    logic [2:0]            if_valid_dbg;
+    logic [2:0] [`XLEN-1:0] is_NPC_dbg;
+    logic [2:0] [31:0]      is_inst_dbg;
+    logic [2:0]            is_valid_dbg;
+    logic [2:0] [`XLEN-1:0] cdb_NPC_dbg;
+    logic [2:0]            cdb_valid_dbg;
+    logic [2:0] [`XLEN-1:0] rt_NPC_dbg;
+    logic [2:0]            rt_valid_dbg;
 
 
     // Instantiate the Pipeline
@@ -102,21 +97,16 @@ module testbench;
         .pipeline_commit_wr_en    (pipeline_commit_wr_en),
         .pipeline_commit_NPC      (pipeline_commit_NPC),
 
-        // .if_NPC_dbg       (if_NPC_dbg),
-        // .if_inst_dbg      (if_inst_dbg),
-        // .if_valid_dbg     (if_valid_dbg),
-        // .if_id_NPC_dbg    (if_id_NPC_dbg),
-        // .if_id_inst_dbg   (if_id_inst_dbg),
-        // .if_id_valid_dbg  (if_id_valid_dbg),
-        // .id_ex_NPC_dbg    (id_ex_NPC_dbg),
-        // .id_ex_inst_dbg   (id_ex_inst_dbg),
-        // .id_ex_valid_dbg  (id_ex_valid_dbg),
-        // .ex_mem_NPC_dbg   (ex_mem_NPC_dbg),
-        // .ex_mem_inst_dbg  (ex_mem_inst_dbg),
-        // .ex_mem_valid_dbg (ex_mem_valid_dbg),
-        // .mem_wb_NPC_dbg   (mem_wb_NPC_dbg),
-        // .mem_wb_inst_dbg  (mem_wb_inst_dbg),
-        // .mem_wb_valid_dbg (mem_wb_valid_dbg)
+        .if_NPC_dbg       (if_NPC_dbg),
+        .if_inst_dbg      (if_inst_dbg),
+        .if_valid_dbg     (if_valid_dbg),
+        .is_NPC_dbg    (is_NPC_dbg),
+        .is_inst_dbg   (is_inst_dbg),
+        .is_valid_dbg  (is_valid_dbg),
+        .cdb_NPC_dbg    (cdb_NPC_dbg),
+        .cdb_valid_dbg  (cdb_valid_dbg),
+        .rt_NPC_dbg   (rt_NPC_dbg),
+        .rt_valid_dbg (rt_valid_dbg)
     );
 
 
@@ -143,7 +133,6 @@ module testbench;
         #(`CLOCK_PERIOD/2.0);
         clock = ~clock;
     end
-
 
     // Task to display # of elapsed clock edges
     task show_clk_count;
@@ -256,18 +245,22 @@ module testbench;
         end else begin
             #2;
 
-            // print the pipeline debug outputs via c code to the pipeline output file
-            // print_cycles();
-            // print_stage(" ", if_inst_dbg,     if_NPC_dbg    [31:0], {31'b0,if_valid_dbg});
-            // print_stage("|", if_id_inst_dbg,  if_id_NPC_dbg [31:0], {31'b0,if_id_valid_dbg});
-            // print_stage("|", id_ex_inst_dbg,  id_ex_NPC_dbg [31:0], {31'b0,id_ex_valid_dbg});
-            // print_stage("|", ex_mem_inst_dbg, ex_mem_NPC_dbg[31:0], {31'b0,ex_mem_valid_dbg});
-            // print_stage("|", mem_wb_inst_dbg, mem_wb_NPC_dbg[31:0], {31'b0,mem_wb_valid_dbg});
-            // print_reg(32'b0, pipeline_commit_wr_data[31:0],
-            //     {27'b0,pipeline_commit_wr_idx}, {31'b0,pipeline_commit_wr_en});
-            // print_membus({30'b0,proc2mem_command}, {28'b0,mem2proc_response},
-            //     32'b0, proc2mem_addr[31:0],
-            //     proc2mem_data[63:32], proc2mem_data[31:0]);
+            print_cycles();
+/*
+            print_stage(" ", if_inst_dbg,     if_NPC_dbg    [31:0], {31'b0,if_valid_dbg});
+            print_stage("|", is_inst_dbg,  is_NPC_dbg [31:0], {31'b0,is_valid_dbg});
+            print_stage("|", `NOP, cdb_NPC_dbg [31:0], {31'b0,cdb_valid_dbg});
+            print_stage("|", `NOP, rt_NPC_dbg[31:0], {31'b0,rt_valid_dbg});
+*/
+            print_reg(32'b0, pipeline_commit_wr_data[0][31:0],
+                 {27'b0,pipeline_commit_wr_idx[0]}, {31'b0,pipeline_commit_wr_en[0]});
+	    print_reg(32'b0, pipeline_commit_wr_data[1][31:0],
+                 {27'b0,pipeline_commit_wr_idx[1]}, {31'b0,pipeline_commit_wr_en[1]});
+	    print_reg(32'b0, pipeline_commit_wr_data[2][31:0],
+                 {27'b0,pipeline_commit_wr_idx[2]}, {31'b0,pipeline_commit_wr_en[2]});
+            print_membus({30'b0,proc2mem_command}, {28'b0,mem2proc_response},
+                 32'b0, proc2mem_addr[31:0],
+                 proc2mem_data[63:32], proc2mem_data[31:0]);
 
             // print register write information to the writeback output file
             if (pipeline_completed_insts > 0) begin
@@ -308,5 +301,44 @@ module testbench;
             debug_counter <= debug_counter + 1;
         end // if(reset)
     end
+/*
+    always @(posedge clock) begin
+        $display("-----------------------");
+	$display("if_NPC[0]:%h if_inst[0]:%h if_valid[0]:%b || if_NPC[1]:%h if_inst[1]:%h if_valid[1]:%b || if_NPC[2]:%h if_inst[2]:%h if_valid[2]:%b",
+		 if_NPC_dbg[0], if_inst_dbg[0], if_valid_dbg[0], if_NPC_dbg[1], if_inst_dbg[1], if_valid_dbg[1], if_NPC_dbg[2], if_inst_dbg[2], if_valid_dbg[2]);
+	$display("is_NPC[0]:%h is_inst[0]:%h is_valid[0]:%b || is_NPC[1]:%h is_inst[1]:%h is_valid[1]:%b || is_NPC[2]:%h is_inst[2]:%h is_valid[2]:%b", 
+		is_NPC_dbg[0], is_inst_dbg[0], is_valid_dbg[0], is_NPC_dbg[1], is_inst_dbg[1], is_valid_dbg[1], is_NPC_dbg[2], is_inst_dbg[2], is_valid_dbg[2]);
+	$display("cdb_NPC[0]:%h cdb_valid[0]:%b || cdb_NPC[1]:%h cdb_valid[1]:%b || cdb_NPC[2]:%h cdb_valid[2]:%b", 
+		cdb_NPC_dbg[0], cdb_valid_dbg[0], cdb_NPC_dbg[1], cdb_valid_dbg[1], cdb_NPC_dbg[2], cdb_valid_dbg[2]);
+	$display("rt_NPC[0]:%h rt_valid[0]:%b || rt_NPC[1]:%h rt_valid[1]:%b || rt_NPC[2]:%h rt_valid[2]:%b", 
+		rt_NPC_dbg[0], rt_valid_dbg[0], rt_NPC_dbg[1], rt_valid_dbg[1], rt_NPC_dbg[2], rt_valid_dbg[2]);
+	$display("wr_idx[0]:%h wr_data[0]:%h wr_en[0]:%b || wr_idx[1]:%h wr_data[1]:%h wr_en[1]:%b || wr_idx[2]:%h wr_data[2]:%h wr_en[2]:%b", 
+		pipeline_commit_wr_idx[0], pipeline_commit_wr_data[0], pipeline_commit_wr_en[0], 
+		pipeline_commit_wr_idx[1], pipeline_commit_wr_data[1], pipeline_commit_wr_en[1],
+		pipeline_commit_wr_idx[2], pipeline_commit_wr_data[2], pipeline_commit_wr_en[2]); 
+    end
+*/
+/*
+    always @(posedge clock) begin
+        $display("-----------------------");
+	$display("if_NPC[0]:%h if_inst[0]:%h if_valid[0]:%b", if_NPC_dbg[0], if_inst_dbg[0], if_valid_dbg[0]);
+	$display("if_NPC[1]:%h if_inst[1]:%h if_valid[1]:%b", if_NPC_dbg[1], if_inst_dbg[1], if_valid_dbg[1]);
+	$display("if_NPC[2]:%h if_inst[2]:%h if_valid[2]:%b", if_NPC_dbg[2], if_inst_dbg[2], if_valid_dbg[2]);
+	$display("is_NPC[0]:%h is_inst[0]:%h is_valid[0]:%b", is_NPC_dbg[0], is_inst_dbg[0], is_valid_dbg[0]);
+	$display("is_NPC[1]:%h is_inst[1]:%h is_valid[1]:%b", is_NPC_dbg[1], is_inst_dbg[1], is_valid_dbg[1]);
+	$display("is_NPC[2]:%h is_inst[2]:%h is_valid[2]:%b", is_NPC_dbg[2], is_inst_dbg[2], is_valid_dbg[2]);
+	$display("cdb_NPC[0]:%h cdb_valid[0]:%b", cdb_NPC_dbg[0], cdb_valid_dbg[0]);
+	$display("cdb_NPC[1]:%h cdb_valid[1]:%b", cdb_NPC_dbg[1], cdb_valid_dbg[1]);
+	$display("cdb_NPC[2]:%h cdb_valid[2]:%b", cdb_NPC_dbg[2], cdb_valid_dbg[2]);
+	$display("rt_NPC[0]:%h rt_valid[0]:%b", rt_NPC_dbg[0], rt_valid_dbg[0]);
+	$display("rt_NPC[1]:%h rt_valid[1]:%b", rt_NPC_dbg[1], rt_valid_dbg[1]);
+	$display("rt_NPC[2]:%h rt_valid[2]:%b", rt_NPC_dbg[2], rt_valid_dbg[2]);
+	$display("wr_idx[0]:%h wr_data[0]:%h wr_en[0]:%b", pipeline_commit_wr_idx[0], pipeline_commit_wr_data[0], pipeline_commit_wr_en[0]); 
+	$display("wr_idx[1]:%h wr_data[1]:%h wr_en[1]:%b", pipeline_commit_wr_idx[1], pipeline_commit_wr_data[1], pipeline_commit_wr_en[1]); 
+	$display("wr_idx[2]:%h wr_data[2]:%h wr_en[2]:%b", pipeline_commit_wr_idx[2], pipeline_commit_wr_data[2], pipeline_commit_wr_en[2]); 
+    end
+*/
+
+    /*$monitor("-----------------------\ntime:%4.0f  clock:%b\nif_NPC:%h if_inst:%h if_valid:%b\nis_NPC:%h is_inst:%h is_valid:%b\ncdb_NPC:%h cdb_valid:%b\nrt_NPC:%h rt_valid:%b\nwr_idx[0]:%h wr_data[0]:%h wr_en[0]:%b\nwr_idx[1]:%h wr_data[1]:%h wr_en[1]:%b\nwr_idx[2]:%h wr_data[2]:%h wr_en[2]:%b\n",$time, clock, if_NPC_dbg, if_inst_dbg, if_valid_dbg, is_NPC_dbg, is_inst_dbg, is_valid_dbg, cdb_NPC_dbg, cdb_valid_dbg, rt_NPC_dbg, rt_valid_dbg, pipeline_commit_wr_idx[0], pipeline_commit_wr_data[0], pipeline_commit_wr_en[0], pipeline_commit_wr_idx[1], pipeline_commit_wr_data[1], pipeline_commit_wr_en[1], pipeline_commit_wr_idx[2], pipeline_commit_wr_data[2], pipeline_commit_wr_en[2]);*/
 
 endmodule // testbench

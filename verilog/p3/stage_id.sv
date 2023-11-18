@@ -188,6 +188,9 @@ module decoder (
                 `WFI: begin
                     halt = `TRUE;
                 end
+                `NOP: begin
+                    illegal = `TRUE;
+                end
                 default: begin
                     illegal = `TRUE;
                 end

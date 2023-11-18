@@ -57,7 +57,7 @@ module pipeline (
     logic [`XLEN-1:0]       squash_pc;
     //logic [`XLEN-1:0]       target_pc; //from ALU result
     // Outputs from IF-Stage and IF/ID Pipeline Register
-    logic [2:0] [`XLEN-1:0] proc2Imem_addr;
+    logic [`XLEN-1:0] proc2Imem_addr;
     IF_ID_PACKET [2:0] if_ib_packet; // From IF to insn buffer
     IF_ID_PACKET [2:0] if_dp_packet; //From insn buffer to dp
     DP_PACKET [2:0] dp_packet_out;
@@ -83,10 +83,35 @@ module pipeline (
     FU_EMPTY_PACKET fu_empty_packet;
 
     logic insn_buffer_stall;
-    //logic take_branch;
+    logic halt;
 
 
-
+    always @(negedge clock) begin
+        $display("-------------------------------------------------------------------------------------------------------");
+        $display("instruction[1]:%b, instruciton[0]:%b", mem2proc_data[63:32], mem2proc_data[31:0]);
+        $display("proc2mem_addr:%b proc2Imem_addr:%b", proc2mem_addr, proc2Imem_addr);
+        $display("if_NPC[0]:%h if_inst[0]:%h if_valid[0]:%b", if_ib_packet[0].NPC, if_ib_packet[0].inst, if_ib_packet[0].valid);
+        $display("if_NPC[1]:%h if_inst[1]:%h if_valid[1]:%b", if_ib_packet[1].NPC, if_ib_packet[1].inst, if_ib_packet[1].valid);
+        $display("if_NPC[2]:%h if_inst[2]:%h if_valid[2]:%b", if_ib_packet[2].NPC, if_ib_packet[2].inst, if_ib_packet[2].valid);
+        $display("ib_NPC[0]:%h ib_inst[0]:%h ib_valid[0]:%b, rob_empty_num:%d, rs_empty_num: %d", if_NPC_dbg[0], if_inst_dbg[0], if_valid_dbg[0], rob_if_packet.empty_num, rs_if_packet.empty_num);
+        $display("ib_NPC[1]:%h ib_inst[1]:%h ib_valid[1]:%b, rob_empty_num:%d, rs_empty_num: %d", if_NPC_dbg[1], if_inst_dbg[1], if_valid_dbg[1], rob_if_packet.empty_num, rs_if_packet.empty_num);
+        $display("ib_NPC[2]:%h ib_inst[2]:%h ib_valid[2]:%b, rob_empty_num:%d, rs_empty_num: %d", if_NPC_dbg[2], if_inst_dbg[2], if_valid_dbg[2], rob_if_packet.empty_num, rs_if_packet.empty_num);
+        $display("dp_NPC[0]:%h dp_inst[0]:%h dp_valid[0]:%b", dp_packet_out[0].NPC, dp_packet_out[0].inst, ~dp_packet_out[0].illegal);
+        $display("dp_NPC[1]:%h dp_inst[1]:%h dp_valid[1]:%b", dp_packet_out[1].NPC, dp_packet_out[1].inst, ~dp_packet_out[1].illegal);
+        $display("dp_NPC[2]:%h dp_inst[2]:%h dp_valid[2]:%b", dp_packet_out[2].NPC, dp_packet_out[2].inst, ~dp_packet_out[2].illegal);
+        $display("is_NPC[0]:%h is_inst[0]:%h is_valid[0]:%b is_tag[0]:%h", is_NPC_dbg[0], is_inst_dbg[0], is_valid_dbg[0], is_ex_reg[0].T);
+        $display("is_NPC[1]:%h is_inst[1]:%h is_valid[1]:%b is_tag[1]:%h", is_NPC_dbg[1], is_inst_dbg[1], is_valid_dbg[1], is_ex_reg[1].T);
+        $display("is_NPC[2]:%h is_inst[2]:%h is_valid[2]:%b is_tag[2]:%h", is_NPC_dbg[2], is_inst_dbg[2], is_valid_dbg[2], is_ex_reg[2].T);
+        $display("cdb_NPC[0]:%h cdb_valid[0]:%b cdb_tag[0]:%h", cdb_NPC_dbg[0], cdb_valid_dbg[0], cdb_rob_packet[0].tag);
+        $display("cdb_NPC[1]:%h cdb_valid[1]:%b cdb_tag[1]:%h", cdb_NPC_dbg[1], cdb_valid_dbg[1], cdb_rob_packet[1].tag);
+        $display("cdb_NPC[2]:%h cdb_valid[2]:%b cdb_tag[2]:%h", cdb_NPC_dbg[2], cdb_valid_dbg[2], cdb_rob_packet[2].tag);
+        $display("rt_NPC[0]:%h rt_valid[0]:%b", rt_NPC_dbg[0], rt_valid_dbg[0]);
+        $display("rt_NPC[1]:%h rt_valid[1]:%b", rt_NPC_dbg[1], rt_valid_dbg[1]);
+        $display("rt_NPC[2]:%h rt_valid[2]:%b", rt_NPC_dbg[2], rt_valid_dbg[2]);
+        $display("wr_idx[0]:%h wr_data[0]:%h wr_en[0]:%b", pipeline_commit_wr_idx[0], pipeline_commit_wr_data[0], pipeline_commit_wr_en[0]); 
+        $display("wr_idx[1]:%h wr_data[1]:%h wr_en[1]:%b", pipeline_commit_wr_idx[1], pipeline_commit_wr_data[1], pipeline_commit_wr_en[1]); 
+        $display("wr_idx[2]:%h wr_data[2]:%h wr_en[2]:%b", pipeline_commit_wr_idx[2], pipeline_commit_wr_data[2], pipeline_commit_wr_en[2]); 
+    end
     
     //////////////////////////////////////////////////
     //                                              //
@@ -300,30 +325,30 @@ module pipeline (
 		    FUNC_NOP			//func_unit
                 };
             is_ex_reg[2] <= {
-                    {$clog2(`ROBLEN){1'b0}}, // T
-                    `NOP,                    // inst
-                    {`XLEN{1'b0}},           // PC
-                    {`XLEN{1'b0}},           // NPC
+            {$clog2(`ROBLEN){1'b0}}, // T
+            `NOP,                    // inst
+            {`XLEN{1'b0}},           // PC
+            {`XLEN{1'b0}},           // NPC
 
-                    {`XLEN{1'b0}},           // RS1_value
-                    {`XLEN{1'b0}},           // RS2_value
-                    
-                    OPA_IS_RS1,              // OPA_SELECT
-                    OPB_IS_RS2,              // OPB_SELECT
-                    
-                    `ZERO_REG,               // dest_reg_idx
-                    ALU_ADD,                 // alu_func
+            {`XLEN{1'b0}},           // RS1_value
+            {`XLEN{1'b0}},           // RS2_value
+            
+            OPA_IS_RS1,              // OPA_SELECT
+            OPB_IS_RS2,              // OPB_SELECT
+            
+            `ZERO_REG,               // dest_reg_idx
+            ALU_ADD,                 // alu_func
 
-                    1'b0,                    // rd_mem
-                    1'b0,                    // wr_mem
-                    1'b0,                    // cond_branch
-                    1'b0,                    // uncond_branch
-                    1'b0,                    // halt
-                    1'b1,                    // illegal
-                    1'b0,                    // csr_op
-                    1'b0,                     // valid
+            1'b0,                    // rd_mem
+            1'b0,                    // wr_mem
+            1'b0,                    // cond_branch
+            1'b0,                    // uncond_branch
+            1'b0,                    // halt
+            1'b1,                    // illegal
+            1'b0,                    // csr_op
+            1'b0,                     // valid
 		    FUNC_NOP			//func_unit
-                };
+        };
         end else begin
             is_ex_reg <= rs_packet_out;
         end
@@ -389,13 +414,14 @@ module pipeline (
 
     stage_rt RT0 (
          // input
-          .rob_rt_packet_in(rob_rt_packet), 
-           // output
-            .rt_dp_packet_out(rt_dp_packet),
-         .valid(rt_valid),
-         .NPC(rt_NPC),
-         .squash_pc(squash_pc),
-         .squash_flag(squash_flag)
+        .rob_rt_packet_in(rob_rt_packet), 
+        // output
+        .rt_dp_packet_out(rt_dp_packet),
+        .valid(rt_valid),
+        .NPC(rt_NPC),
+        .squash_pc(squash_pc),
+        .squash_flag(squash_flag),
+	    .halt(halt)
      );
 
     // debug outputs
@@ -418,7 +444,7 @@ module pipeline (
     assign pipeline_completed_insts[0] = {3'b0, rt_valid[0]}; // commit one valid instruction
     assign pipeline_completed_insts[1] = {3'b0, rt_valid[1]};
     assign pipeline_completed_insts[2] = {3'b0, rt_valid[2]};
-    assign pipeline_error_status = (mem2proc_response==4'h0) ? LOAD_ACCESS_FAULT : NO_ERROR;
+    assign pipeline_error_status = (halt) ? HALTED_ON_WFI :(mem2proc_response==4'h0) ? LOAD_ACCESS_FAULT : NO_ERROR;
 
     assign pipeline_commit_wr_en[0]   = rt_dp_packet[0].valid;
     assign pipeline_commit_wr_en[1]   = rt_dp_packet[1].valid;

@@ -82,18 +82,25 @@ module FU_ALU (
     input                                                 clear,
     input RS_IS_PACKET                                    fu_input,
 
+    output logic                                          halt,
     output logic [`XLEN-1:0]                              NPC,
     output logic [$clog2(`ROBLEN)-1:0]                    tag,
     output logic [`XLEN-1:0]                              result,
-    output logic                                          busy,
+    output logic                                          busy, // unused
     output logic                                          result_ready,
     output logic                                          branch_taken
 );
 
     logic [`XLEN-1:0]                                     opa_mux_out, opb_mux_out;
-    logic [`XLEN-1:0]                                     next_result;
     logic                                                 take_conditional;
+
+    logic                                                 next_halt;
+    logic [`XLEN-1:0]                                     next_NPC;
+    logic [$clog2(`ROBLEN)-1:0]                           next_tag;
+    logic [`XLEN-1:0]                                     next_result;
     logic                                                 next_result_ready;
+    logic                                                 next_branch_taken;
+
 
     // ALU opA mux
     always_comb begin
@@ -119,12 +126,14 @@ module FU_ALU (
         endcase
     end
   
-    assign NPC = fu_input.NPC;
-    assign tag = fu_input.T;  
-    assign busy = (fu_input.inst!=`NOP) & (~result_ready);
+    assign next_halt = fu_input.halt;
+    assign next_NPC = fu_input.NPC;
+    assign next_tag = fu_input.T;  
+    assign busy = (fu_input.inst!=`NOP) & (~result_ready); // unused
     // assign busy = 0; // I think ALU can never be busy...
-    assign branch_taken = fu_input.uncond_branch || (fu_input.cond_branch && take_conditional);
     assign next_result_ready = (fu_input.inst != `NOP);
+    assign next_branch_taken = fu_input.uncond_branch || (fu_input.cond_branch && take_conditional);
+
 
     // Instantiate the ALU
     alu alu_0 (
@@ -151,11 +160,19 @@ module FU_ALU (
     always_ff @(posedge clock) begin
         if(reset || clear) begin
             result <= {`XLEN{1'b0}};
+            halt <= 0;
+            NPC <= 0;
+            tag <= 0;
             result_ready <= 0;
+            branch_taken <= 0;
+
         end else begin
             result <= next_result;
-            // result_ready <= fu_input.can_execute;
+            halt <= next_halt;
+            NPC <= next_NPC;
+            tag <= next_tag;
             result_ready <= next_result_ready;
+            branch_taken <= next_branch_taken;
         end
     end
 
@@ -168,8 +185,20 @@ module mult_stage (
     input clock, reset, start,
     input [63:0] prev_sum, mplier, mcand,
 
+    input high_1_low_0_in,
+    input                                                 halt_in,
+    input [`XLEN-1:0]                                     NPC_in,
+    input [$clog2(`ROBLEN)-1:0]                           tag_in,
+
+
     output logic [63:0] product_sum, next_mplier, next_mcand,
-    output logic done
+    output logic done,
+
+    output logic high_1_low_0_out,
+    output logic                                          halt_out,
+    output logic [`XLEN-1:0]                              NPC_out,
+    output logic [$clog2(`ROBLEN)-1:0]                    tag_out
+
 );
 
     parameter SHIFT = 64/`MULT_STAGES;
@@ -190,8 +219,16 @@ module mult_stage (
     always_ff @(posedge clock) begin
         if (reset) begin
             done <= 1'b0;
+            high_1_low_0_out <= 1'b0;
+            halt_out <= 0;
+            NPC_out <= 0;
+            tag_out <= 0;
         end else begin
             done <= start;
+            high_1_low_0_out <= high_1_low_0_in;
+            halt_out <= halt_in;
+            NPC_out <= NPC_in;
+            tag_out <= tag_in;
         end
     end
 
@@ -203,9 +240,24 @@ module mult (
     input [63:0] mcand, mplier, // Notice here is 64 bit
     input start,
 
+    input high_1_low_0_in,
+    input                                                 halt_in,
+    input [`XLEN-1:0]                                     NPC_in,
+    input [$clog2(`ROBLEN)-1:0]                           tag_in,
+
+
     output logic [63:0] product,
-    output logic done
+    output logic done,
+
+    output logic high_1_low_0_out,
+    output logic                                          halt_out,
+    output logic [`XLEN-1:0]                              NPC_out,
+    output logic [$clog2(`ROBLEN)-1:0]                    tag_out
 );
+
+    logic [`MULT_STAGES-2:0] internal_high_1_low_0, internal_halt; // for special use
+    logic [`MULT_STAGES-2:0] [`XLEN-1:0] internal_NPC;
+    logic [`MULT_STAGES-2:0] [$clog2(`ROBLEN)-1:0] internal_tag;
 
     logic [`MULT_STAGES-2:0] internal_dones;
     logic [(64*(`MULT_STAGES-1))-1:0] internal_product_sums, internal_mcands, internal_mpliers;
@@ -223,7 +275,16 @@ module mult (
         .product_sum ({product,    internal_product_sums}),
         .next_mplier ({mplier_out, internal_mpliers}),
         .next_mcand  ({mcand_out,  internal_mcands}),
-        .done        ({done,       internal_dones}) // done when the final stage is done
+        .done        ({done,       internal_dones}), // done when the final stage is done
+
+        .high_1_low_0_in({internal_high_1_low_0, high_1_low_0_in}),
+        .high_1_low_0_out({high_1_low_0_out, internal_high_1_low_0}),
+        .halt_in({internal_halt, halt_in}),
+        .halt_out({halt_out, internal_halt}),
+        .NPC_in({internal_NPC, NPC_in}),
+        .NPC_out({NPC_out, internal_NPC}),
+        .tag_in({internal_tag, tag_in}),
+        .tag_out({tag_out, internal_tag})
     );
 
 endmodule
@@ -235,14 +296,15 @@ module FU_MULT (
     input                                                 clear,
     input RS_IS_PACKET                                    fu_input,
 
+    output logic                                          halt,
     output logic [`XLEN-1:0]                              NPC,
     output logic [$clog2(`ROBLEN)-1:0]                    tag,
     output logic [`XLEN-1:0]                              result,
     output logic                                          busy,
-    output logic                                          result_ready
+    output logic                                          result_ready,
     
     // debug
-    // output logic                                          high_1_low_0
+    output logic                                          high_1_low_0_out
 );
 
     logic [2*`XLEN-1:0] 	   mcand, mplier, product;
@@ -283,8 +345,9 @@ module FU_MULT (
 	end
 
     assign busy = (fu_input.inst!=`NOP) & (~result_ready);
-    assign tag = fu_input.T;
-    assign NPC = fu_input.NPC;
+    // assign tag = fu_input.T;
+    // assign NPC = fu_input.NPC;
+    // assign halt = fu_input.halt;
 
 	mult mult_0(
 		.clock(clock),
@@ -294,25 +357,21 @@ module FU_MULT (
 		// .start(fu_input.can_execute), // need to consider what this is
         // .start(~fu_input.illegal),
         .start((fu_input.inst != `NOP)),
+        .high_1_low_0_in(high_1_low_0), // special use
+        .halt_in(fu_input.halt),
+        .NPC_in(fu_input.NPC),
+        .tag_in(fu_input.T),
 
 		.product(product),
-		.done(result_ready)
+		.done(result_ready),
+        .high_1_low_0_out(high_1_low_0_out), // special use
+        .halt_out(halt),
+        .NPC_out(NPC),
+        .tag_out(tag)
 	);
 
-    assign result = high_1_low_0 ? product[2*`XLEN-1:`XLEN] : product[`XLEN-1:0];
+    assign result = high_1_low_0_out ? product[2*`XLEN-1:`XLEN] : product[`XLEN-1:0];
 
-endmodule
-
-
-module high_1_low_0_buffer (
-    input                                                 clock,
-    input                                                 reset,
-    input                                                 clear,
-    input                                                 high_1_low_0,
-
-    output logic                                          now1_0
-
-);
 endmodule
 
 

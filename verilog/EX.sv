@@ -15,13 +15,17 @@ module EX (
     // output BRANCH_PACKET [2:0]                            Branch_packet, // branch_taken, bp_pc
     
     // to CDB and Fetch (maybe CDB to fetch?)
-    output EX_PACKET [2:0]                                EX_packet // tag, value, valid, NPC
+    output EX_PACKET [2:0]                                EX_packet, // tag, value, valid, NPC, halt
 
     // debug
     // output logic [`NUM_FU_ALU-1:0] [`XLEN-1:0]                   ALU_result,
     // output logic [`NUM_FU_MULT-1:0] [`XLEN-1:0]                  MULT_result,
     // output RS_IS_PACKET [`NUM_FU_ALU-1:0]                        ALU_input,
     // output RS_IS_PACKET [`NUM_FU_MULT-1:0]                       MULT_input
+    // output logic [`NUM_FU_MULT-1:0]                              MULT_buffer_busy,
+    // output logic [`NUM_FU_MULT-1:0]                              MULT_busy,
+    output logic [`NUM_FU_ALU-1:0]                        ALU_buffer_busy,
+    output logic [`NUM_FU_ALU-1:0]                        ALU_busy
 
     // LSQ stuff to be added
 
@@ -36,7 +40,7 @@ module EX (
     logic [`NUM_FU_ALU-1:0] [`XLEN-1:0]                   ALU_result;
     logic [`NUM_FU_MULT-1:0] [`XLEN-1:0]                  MULT_result;
 
-    logic [`NUM_FU_ALU-1:0]                               ALU_busy;
+    // logic [`NUM_FU_ALU-1:0]                               ALU_busy;
     logic [`NUM_FU_MULT-1:0]                              MULT_busy;
 
     logic [`NUM_FU_ALU-1:0]                               ALU_result_ready;
@@ -45,15 +49,19 @@ module EX (
     logic [`NUM_FU_ALU-1:0] [`XLEN-1:0]                   ALU_NPC; // PC + 4
     logic [`NUM_FU_MULT-1:0] [`XLEN-1:0]                  MULT_NPC; // PC + 4
 
+    logic [`NUM_FU_ALU-1:0]                               ALU_halt; // stop
+    logic [`NUM_FU_MULT-1:0]                              MULT_halt; // stop
+
     logic [2:0]                                           ALU_branch_taken; // emm
 
+    logic [2:0]                                           CDB_halt;
     logic [2:0] [`XLEN-1:0]                               CDB_NPC;
     logic [2:0] [$clog2(`ROBLEN)-1:0]                     CDB_tag;
     logic [2:0] [`XLEN-1:0]                               CDB_value;
     logic [2:0]                                           CDB_valid;
     logic [2:0]                                           CDB_branch_taken; // emm
 
-    logic [`NUM_FU_ALU-1:0]                               ALU_buffer_busy;
+    // logic [`NUM_FU_ALU-1:0]                               ALU_buffer_busy;
     logic [`NUM_FU_MULT-1:0]                              MULT_buffer_busy;
 
     // generate FU's
@@ -66,6 +74,7 @@ module EX (
                 .clear(clear),
                 .fu_input(ALU_input[a]),
 
+                .halt(ALU_halt[a]),
                 .NPC(ALU_NPC[a]),
                 .tag(ALU_tag[a]),
                 .result(ALU_result[a]), 
@@ -85,6 +94,7 @@ module EX (
                 .clear(clear),
                 .fu_input(MULT_input[b]),
 
+                .halt(MULT_halt[b]),
                 .NPC(MULT_NPC[b]),
                 .tag(MULT_tag[b]),
                 .result(MULT_result[b]), 
@@ -181,12 +191,12 @@ module EX (
     end
 
     // put stuff into FU_empty_packet
-    assign FU_empty_packet.ALU_empty = ~(ALU_busy | ALU_buffer_busy);
-    assign FU_empty_packet.MULT_empty = ~(MULT_busy | MULT_buffer_busy);
+    // assign FU_empty_packet.ALU_empty = ~(ALU_busy | ALU_buffer_busy);
+    // assign FU_empty_packet.MULT_empty = ~(MULT_busy | MULT_buffer_busy);
     // assign FU_empty_packet.ALU_empty = ~(ALU_busy);
     // assign FU_empty_packet.MULT_empty = ~(MULT_busy);
-    // assign FU_empty_packet.ALU_empty = ~(ALU_buffer_busy);
-    // assign FU_empty_packet.MULT_empty = ~(MULT_buffer_busy);
+    assign FU_empty_packet.ALU_empty = ~(ALU_buffer_busy);
+    assign FU_empty_packet.MULT_empty = ~(MULT_buffer_busy);
 
     // put stuff into EX_packet
     complete_buffer complete_buffer_0 (
@@ -200,7 +210,12 @@ module EX (
         .ALU_tag(ALU_tag),
         .MULT_tag(MULT_tag),
         .ALU_branch_taken(ALU_branch_taken),
+        .ALU_NPC(ALU_NPC),
+        .MULT_NPC(MULT_NPC),
+        .ALU_halt(ALU_halt),
+        .MULT_halt(MULT_halt),
 
+        .CDB_halt(CDB_halt),
         .CDB_NPC(CDB_NPC),
         .CDB_tag(CDB_tag),
         .CDB_value(CDB_value),
@@ -230,6 +245,10 @@ module EX (
     assign EX_packet[1].NPC = CDB_NPC[1];
     assign EX_packet[2].NPC = CDB_NPC[2];
 
+    assign EX_packet[0].halt = CDB_halt[0];
+    assign EX_packet[1].halt = CDB_halt[1];
+    assign EX_packet[2].halt = CDB_halt[2];
+
 endmodule
 
 
@@ -246,6 +265,8 @@ module complete_buffer (
     input [`NUM_FU_MULT-1:0] [$clog2(`ROBLEN)-1:0]        MULT_tag,
     input [`NUM_FU_ALU-1:0] [`XLEN-1:0]                   ALU_NPC,
     input [`NUM_FU_MULT-1:0] [`XLEN-1:0]                  MULT_NPC,
+    input [`NUM_FU_ALU-1:0]                               ALU_halt,
+    input [`NUM_FU_MULT-1:0]                              MULT_halt,
     input [`NUM_FU_ALU-1:0]                               ALU_branch_taken,
 
     output logic [2:0] [$clog2(`ROBLEN)-1:0]              CDB_tag,
@@ -253,6 +274,7 @@ module complete_buffer (
     output logic [2:0]                                    CDB_valid,
     output logic [2:0]                                    CDB_branch_taken,
     output logic [2:0] [`XLEN-1:0]                        CDB_NPC,
+    output logic [2:0]                                    CDB_halt,
 
     output logic [`NUM_FU_ALU-1:0]                        ALU_buffer_busy,
     output logic [`NUM_FU_MULT-1:0]                       MULT_buffer_busy
@@ -260,6 +282,7 @@ module complete_buffer (
 
     EX_PACKET [`CompBuff_SIZE-1:0]                        buffer, next_buffer;
 
+    logic [2:0]                                           next_CDB_halt;   
     logic [2:0] [`XLEN-1:0]                               next_CDB_NPC;
     logic [2:0] [$clog2(`ROBLEN)-1:0]                     next_CDB_tag;
     logic [2:0] [`XLEN-1:0]                               next_CDB_value;
@@ -269,14 +292,19 @@ module complete_buffer (
     // assign function unit outputs to the buffer
     always_comb begin
         next_buffer = buffer;
+        next_CDB_halt = 0;
         next_CDB_NPC = 0;
         next_CDB_tag = 0; // clear CDB at every cycle
         next_CDB_value = 0;
         next_CDB_valid = 0;
         next_CDB_branch_taken = 0;
 
+        ALU_buffer_busy = 0;
+        MULT_buffer_busy = 0;
+
         if (clear) begin
             next_buffer = 0;
+            next_CDB_halt = 0;
             next_CDB_NPC = 0;
             next_CDB_tag = 0;
             next_CDB_value = 0;
@@ -286,6 +314,7 @@ module complete_buffer (
         end else begin
             for (int i=0; i<`NUM_FU_MULT; i=i+1) begin
                 if (MULT_result_ready[i] && ~next_buffer[i].valid) begin
+                    next_buffer[i].halt = MULT_halt[i];
                     next_buffer[i].NPC = MULT_NPC[i];
                     next_buffer[i].T = MULT_tag[i];
                     next_buffer[i].value = MULT_result[i];
@@ -296,6 +325,7 @@ module complete_buffer (
             end
             for (int j=0; j<`NUM_FU_ALU; j=j+1) begin
                 if (ALU_result_ready[j] && ~next_buffer[j+`NUM_FU_MULT].valid) begin
+                    next_buffer[j+`NUM_FU_MULT].halt = ALU_halt[j];
                     next_buffer[j+`NUM_FU_MULT].NPC = ALU_NPC[j];
                     next_buffer[j+`NUM_FU_MULT].T = ALU_tag[j];
                     next_buffer[j+`NUM_FU_MULT].value = ALU_result[j];
@@ -309,6 +339,7 @@ module complete_buffer (
             for (int i=0; i<3; i=i+1) begin
                 for (int j=0; j<`CompBuff_SIZE; j=j+1) begin
                     if (next_buffer[j].valid) begin
+                        next_CDB_halt[i] = next_buffer[j].halt;
                         next_CDB_NPC[i] = next_buffer[j].NPC;
                         next_CDB_tag[i] = next_buffer[j].T;
                         next_CDB_value[i] = next_buffer[j].value;
@@ -321,26 +352,35 @@ module complete_buffer (
                 end
             end 
 
+            // give busy information
+            for (int i=0; i<`NUM_FU_MULT; i=i+1) begin
+                MULT_buffer_busy[i] = next_buffer[i].valid;// next or current
+            end
+            for (int j=0; j<`NUM_FU_ALU; j=j+1) begin
+                ALU_buffer_busy[j] = next_buffer[j+`NUM_FU_MULT].valid;
+            end
+
         end
     end
 
-    // give busy information
-    always_comb begin
-        ALU_buffer_busy = 0;
-        MULT_buffer_busy = 0;
+    // // give busy information
+    // always_comb begin
+    //     ALU_buffer_busy = 0;
+    //     MULT_buffer_busy = 0;
 
-        for (int i=0; i<`NUM_FU_MULT; i=i+1) begin
-            MULT_buffer_busy[i] = buffer[i].valid;
-        end
-        for (int j=0; j<`NUM_FU_ALU; j=j+1) begin
-            ALU_buffer_busy[j] = buffer[j+`NUM_FU_MULT].valid;
-        end
-    end
+    //     for (int i=0; i<`NUM_FU_MULT; i=i+1) begin
+    //         MULT_buffer_busy[i] = buffer[i].valid;// next or current
+    //     end
+    //     for (int j=0; j<`NUM_FU_ALU; j=j+1) begin
+    //         ALU_buffer_busy[j] = buffer[j+`NUM_FU_MULT].valid;
+    //     end
+    // end
 
     // update buffer and CDB
     always_ff @(posedge clock) begin 
         if(reset) begin
             buffer <= 0;
+            CDB_halt <= 0;
             CDB_NPC <= 0;
             CDB_tag <= 0;
             CDB_value <= 0;
@@ -369,6 +409,7 @@ module complete_buffer (
             // end
 
             buffer <= next_buffer;
+            CDB_halt <= next_CDB_halt;
             CDB_NPC <= next_CDB_NPC;
             CDB_tag <= next_CDB_tag;
             CDB_value <= next_CDB_value;

@@ -36,6 +36,7 @@ generate
             .csr_op(dp_packet[de].csr_op),
             .halt(dp_packet[de].halt),
             .illegal(dp_packet[de].illegal),
+            .valid_out(dp_packet[de].valid),
             .rs1_instruction(dp_packet[de].rs1_instruction),
             .rs2_instruction(dp_packet[de].rs2_instruction),
             .dest_reg_valid(dp_packet[de].dest_reg_valid),

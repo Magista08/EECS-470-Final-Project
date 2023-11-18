@@ -434,6 +434,7 @@ typedef struct packed {
     logic [`XLEN-1:0] value;// cdb
     logic             take_branch;//cdb
     logic [`XLEN-1:0]             NPC;
+    logic                              halt;
 } ROB_LINE;
 
 
@@ -488,7 +489,8 @@ typedef struct packed {
     logic [$clog2(`ROBLEN)-1:0] tag;//ROBID
     logic 				 	    valid;
     logic                              take_branch;
-    logic  [`XLEN-1:0]          NPC;               
+    logic  [`XLEN-1:0]          NPC;
+    logic                               halt;               
 } CDB_ROB_PACKET;
 
 typedef struct packed {
@@ -566,6 +568,7 @@ typedef struct packed {
     logic                          valid;
     logic                          branch_taken;
     logic [`XLEN-1:0]              NPC; // required by them~
+    logic                       halt;
 } EX_PACKET;
 
 typedef struct packed {
@@ -595,6 +598,7 @@ typedef struct packed {
     logic                              take_branch;
     logic [`XLEN-1:0]          NPC;
     logic                              valid;
+    logic                              halt;
 } ROB_RT_PACKET;
 
 typedef struct packed {
@@ -604,5 +608,4 @@ typedef struct packed {
 } RT_DP_PACKET;
 
 `endif // __SYS_DEFS_SVH__
-
 

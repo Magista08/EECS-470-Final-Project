@@ -19,6 +19,7 @@ module DEC (
     output logic          csr_op, // used for CSR operations, we only use this as a cheap way to get the return code out
     output logic          halt,   // non-zero on a halt
     output logic          illegal, // non-zero on an illegal instruction
+    output logic          valid_out, // non-zero on an valid_out instruction
 
     output logic          rs1_instruction, rs2_instruction, // Whether rs1 and rs2 is in use 1: in use, 0: not in use
     output logic          dest_reg_valid, // Whether the destination register is in used 1: in use, 0: not in use
@@ -41,7 +42,8 @@ module DEC (
         cond_branch   = 1'b0;
         uncond_branch = 1'b0;
         halt          = 1'b0;
-        illegal       = 1'b0;
+        valid_out       = 1'b0;
+        illegal       = ~valid;
 
         rs1_instruction = 0;
         rs2_instruction = 0;
@@ -264,7 +266,7 @@ module DEC (
                     halt = `TRUE;
                 end
                 default: begin
-                    illegal = `TRUE;
+                    valid_out = `TRUE;
                 end
         endcase // casez (inst)
         end // if (valid)

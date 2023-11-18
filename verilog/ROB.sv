@@ -45,6 +45,7 @@ module ROB (
 		rob_table_n[i].value =  rob_table[i].value;
 		rob_table_n[i].take_branch =  rob_table[i].take_branch;
 		rob_table_n[i].NPC = rob_table[i].NPC;
+		rob_table_n[i].halt = rob_table[i].halt;
 	    end
 	end
 
@@ -111,28 +112,34 @@ module ROB (
 	    rob_table_n[CDB_packet_in[0].tag].value = CDB_packet_in[0].value;
 	    rob_table_n[CDB_packet_in[0].tag].take_branch = CDB_packet_in[0].take_branch;
 	    rob_table_n[CDB_packet_in[0].tag].NPC = CDB_packet_in[0].NPC;
+	    rob_table_n[CDB_packet_in[0].tag].halt = CDB_packet_in[0].halt;
 	end else if(~CDB_packet_in[2].valid) begin
 	    rob_table_n[CDB_packet_in[0].tag].value_flag = 1;
 	    rob_table_n[CDB_packet_in[0].tag].value = CDB_packet_in[0].value;
 	    rob_table_n[CDB_packet_in[0].tag].take_branch = CDB_packet_in[0].take_branch;
 	    rob_table_n[CDB_packet_in[0].tag].NPC = CDB_packet_in[0].NPC;
+	    rob_table_n[CDB_packet_in[0].tag].halt = CDB_packet_in[0].halt;
 	    rob_table_n[CDB_packet_in[1].tag].value_flag = 1;
 	    rob_table_n[CDB_packet_in[1].tag].value = CDB_packet_in[1].value;
 	    rob_table_n[CDB_packet_in[1].tag].take_branch = CDB_packet_in[1].take_branch;
 	    rob_table_n[CDB_packet_in[1].tag].NPC = CDB_packet_in[1].NPC;
+	    rob_table_n[CDB_packet_in[1].tag].halt = CDB_packet_in[1].halt;
 	end else begin
 	    rob_table_n[CDB_packet_in[0].tag].value_flag = 1;
 	    rob_table_n[CDB_packet_in[0].tag].value = CDB_packet_in[0].value;
 	    rob_table_n[CDB_packet_in[0].tag].take_branch = CDB_packet_in[0].take_branch;
 	    rob_table_n[CDB_packet_in[0].tag].NPC = CDB_packet_in[0].NPC;
+	    rob_table_n[CDB_packet_in[0].tag].halt = CDB_packet_in[0].halt;
 	    rob_table_n[CDB_packet_in[1].tag].value_flag = 1;
 	    rob_table_n[CDB_packet_in[1].tag].value = CDB_packet_in[1].value;
 	    rob_table_n[CDB_packet_in[1].tag].take_branch = CDB_packet_in[1].take_branch;
 	    rob_table_n[CDB_packet_in[1].tag].NPC = CDB_packet_in[1].NPC;
+	    rob_table_n[CDB_packet_in[1].tag].halt = CDB_packet_in[1].halt;
 	    rob_table_n[CDB_packet_in[2].tag].value_flag = 1;
 	    rob_table_n[CDB_packet_in[2].tag].value = CDB_packet_in[2].value;
 	    rob_table_n[CDB_packet_in[2].tag].take_branch = CDB_packet_in[2].take_branch;
 	    rob_table_n[CDB_packet_in[2].tag].NPC = CDB_packet_in[2].NPC;
+	    rob_table_n[CDB_packet_in[2].tag].halt = CDB_packet_in[2].halt;
 	end
     end
 
@@ -140,6 +147,7 @@ module ROB (
     assign RT_packet_out[0].value = rob_table[head].value;
     assign RT_packet_out[0].take_branch = (~rob_table[head].value_flag) ? 0 : rob_table[head].take_branch;
     assign RT_packet_out[0].NPC = rob_table[head].NPC;
+    assign RT_packet_out[0].halt = rob_table[head].halt;
     assign RT_packet_out[0].valid = (~rob_table[head].value_flag) ? 0 : 1;
     assign RT_packet_out[1].dest_reg_idx = (~rob_table[head].value_flag || ~rob_table[head_plus1[$clog2(`ROBLEN)-1:0]].value_flag) ? 5'b00000 : 
 						rob_table[head_plus1[$clog2(`ROBLEN)-1:0]].reg_id;
@@ -147,6 +155,7 @@ module ROB (
     assign RT_packet_out[1].take_branch = (~rob_table[head].value_flag || ~rob_table[head_plus1[$clog2(`ROBLEN)-1:0]].value_flag) ? 0 : 
 						rob_table[head_plus1[$clog2(`ROBLEN)-1:0]].take_branch;
     assign RT_packet_out[1].NPC = rob_table[head_plus1[$clog2(`ROBLEN)-1:0]].NPC;
+    assign RT_packet_out[1].halt = rob_table[head_plus1[$clog2(`ROBLEN)-1:0]].halt;
     assign RT_packet_out[1].valid = (~rob_table[head].value_flag || ~rob_table[head_plus1[$clog2(`ROBLEN)-1:0]].value_flag) ? 0 : 1;
     assign RT_packet_out[2].dest_reg_idx = (~rob_table[head].value_flag || ~rob_table[head_plus1[$clog2(`ROBLEN)-1:0]].value_flag || 
 						~rob_table[head_plus2[$clog2(`ROBLEN)-1:0]].value_flag) ? 5'b00000 : rob_table[head_plus2[$clog2(`ROBLEN)-1:0]].reg_id;
@@ -154,6 +163,7 @@ module ROB (
     assign RT_packet_out[2].take_branch = (~rob_table[head].value_flag || ~rob_table[head_plus1[$clog2(`ROBLEN)-1:0]].value_flag || 
 						~rob_table[head_plus2[$clog2(`ROBLEN)-1:0]].value_flag) ? 0 : rob_table[head_plus2[$clog2(`ROBLEN)-1:0]].take_branch;
     assign RT_packet_out[2].NPC = rob_table[head_plus2[$clog2(`ROBLEN)-1:0]].NPC;
+    assign RT_packet_out[2].halt = rob_table[head_plus2[$clog2(`ROBLEN)-1:0]].halt;
     assign RT_packet_out[2].valid = (~rob_table[head].value_flag || ~rob_table[head_plus1[$clog2(`ROBLEN)-1:0]].value_flag || 
 						~rob_table[head_plus2[$clog2(`ROBLEN)-1:0]].value_flag) ? 0 : 1;
 

@@ -71,9 +71,9 @@ module RS (
     logic [2:0] [`RSLEN-1:0]    rs_is_posi_line;
 
     logic [1:0]                 alu_empty_count;
-    logic [1:0]                 mult_empty_count;
+    //logic [1:0]                 mult_empty_count;
     logic [$clog2(`RSLEN):0]                 alu_num;
-    logic [$clog2(`RSLEN):0]                 mult_num;
+    //logic [$clog2(`RSLEN):0]                 mult_num;
     logic [`RSLEN-1:0]    masked_not_ready;
     
 
@@ -127,21 +127,21 @@ module RS (
     always_comb begin
         alu_empty_count = 0;
 	alu_num = 0;
-	mult_empty_count = 0;
-	mult_num = 0;
+	//mult_empty_count = 0;
+	//mult_num = 0;
         for (int n = 0; n < 3; n++) begin
             if (fu_empty_packet.ALU_empty[n]) begin
                 alu_empty_count = alu_empty_count + 1;
             end
-	    if (fu_empty_packet.MULT_empty[n]) begin
-                mult_empty_count = mult_empty_count + 1;
-            end
+	    // if (fu_empty_packet.MULT_empty[n]) begin
+        //         mult_empty_count = mult_empty_count + 1;
+        //     end
         end
 	for (int l = 0; l < `RSLEN; l++) begin
 	    alu_num = (~not_ready[l] && (rs_table[l].func_unit == FUNC_ALU)) ? alu_num + 1 : alu_num;
-	    mult_num = (~not_ready[l] && (rs_table[l].func_unit == FUNC_MUL)) ? mult_num + 1 : mult_num;
+	    //mult_num = (~not_ready[l] && (rs_table[l].func_unit == FUNC_MUL)) ? mult_num + 1 : mult_num;
 	    masked_not_ready[l] = (not_ready[l]) ? 1 : 
-		(((alu_num > alu_empty_count) && (rs_table[l].func_unit == FUNC_ALU)) || ((mult_num > mult_empty_count) && (rs_table[l].func_unit == FUNC_MUL))) ? 1 : 0;
+		(((alu_num > alu_empty_count) && (rs_table[l].func_unit == FUNC_ALU))) ? 1 : 0;
 	end
     end
 
@@ -170,33 +170,31 @@ module RS (
 
     always_comb begin
         is_packet_out[0] ={
-                    {$clog2(`ROBLEN){1'b0}}, // T
-                    `NOP,                    // inst
-                    {`XLEN{1'b0}},           // PC
-                    {`XLEN{1'b0}},           // NPC
+            {$clog2(`ROBLEN){1'b0}}, // T
+            `NOP,                    // inst
+            {`XLEN{1'b0}},           // PC
+            {`XLEN{1'b0}},           // NPC
 
-                    {`XLEN{1'b0}},           // RS1_value
-                    {`XLEN{1'b0}},           // RS2_value
-                    
-                    OPA_IS_RS1,              // OPA_SELECT
-                    OPB_IS_RS2,              // OPB_SELECT
-                    
-                    `ZERO_REG,               // dest_reg_idx
-                    ALU_ADD,                 // alu_func
+            {`XLEN{1'b0}},           // RS1_value
+            {`XLEN{1'b0}},           // RS2_value
+            
+            OPA_IS_RS1,              // OPA_SELECT
+            OPB_IS_RS2,              // OPB_SELECT
+            
+            `ZERO_REG,               // dest_reg_idx
+            ALU_ADD,                 // alu_func
 
-                    1'b0,                    // rd_mem
-                    1'b0,                    // wr_mem
-                    1'b0,                    // cond_branch
-                    1'b0,                    // uncond_branch
-                    1'b0,                    // halt
-                    1'b1,                    // illegal
-                    1'b0,                    // csr_op
-                    1'b0,                     // valid
+            1'b0,                    // rd_mem
+            1'b0,                    // wr_mem
+            1'b0,                    // cond_branch
+            1'b0,                    // uncond_branch
+            1'b0,                    // halt
+            1'b1,                    // illegal
+            1'b0,                    // csr_op
+            1'b0,                     // valid
 		    FUNC_NOP			//func_unit
-                };
+        };
         for (int i=0; i<`RSLEN; i++) begin
-            // FU detect hazard
-
             // Packet out
             if (rs_is_posi[0][i] == 1 && ~reset) begin
                 //posi[i] <= 0;
@@ -220,42 +218,38 @@ module RS (
                 is_packet_out[0].illegal       = 1'b0;
                 is_packet_out[0].csr_op        = rs_table[i].csr_op;
                 is_packet_out[0].valid         = rs_table[i].valid;
-		is_packet_out[0].func_unit     = rs_table[i].func_unit;
+		        is_packet_out[0].func_unit     = rs_table[i].func_unit;
             end 
         end
-        //$display("not_ready = %b", not_ready); 
-	//$display("masked_not_ready = %b", masked_not_ready); 
     end
 
     always_comb begin
         is_packet_out[1] ={
-                    {$clog2(`ROBLEN){1'b0}}, // T
-                    `NOP,                    // inst
-                    {`XLEN{1'b0}},           // PC
-                    {`XLEN{1'b0}},           // NPC
+            {$clog2(`ROBLEN){1'b0}}, // T
+            `NOP,                    // inst
+            {`XLEN{1'b0}},           // PC
+            {`XLEN{1'b0}},           // NPC
 
-                    {`XLEN{1'b0}},           // RS1_value
-                    {`XLEN{1'b0}},           // RS2_value
-                    
-                    OPA_IS_RS1,              // OPA_SELECT
-                    OPB_IS_RS2,              // OPB_SELECT
-                    
-                    `ZERO_REG,               // dest_reg_idx
-                    ALU_ADD,                 // alu_func
+            {`XLEN{1'b0}},           // RS1_value
+            {`XLEN{1'b0}},           // RS2_value
+            
+            OPA_IS_RS1,              // OPA_SELECT
+            OPB_IS_RS2,              // OPB_SELECT
+            
+            `ZERO_REG,               // dest_reg_idx
+            ALU_ADD,                 // alu_func
 
-                    1'b0,                    // rd_mem
-                    1'b0,                    // wr_mem
-                    1'b0,                    // cond_branch
-                    1'b0,                    // uncond_branch
-                    1'b0,                    // halt
-                    1'b1,                    // illegal
-                    1'b0,                    // csr_op
-                    1'b0,                     // valid
+            1'b0,                    // rd_mem
+            1'b0,                    // wr_mem
+            1'b0,                    // cond_branch
+            1'b0,                    // uncond_branch
+            1'b0,                    // halt
+            1'b1,                    // illegal
+            1'b0,                    // csr_op
+            1'b0,                     // valid
 		    FUNC_NOP                 //func_unit
-                };
+        };
         for (int j=0; j<`RSLEN; j++) begin
-            // FU detect hazard
-
             // Packet out
             if (rs_is_posi[1][j] == 1 && ~reset) begin
                 //posi[i] <= 0;
@@ -279,7 +273,7 @@ module RS (
                 is_packet_out[1].illegal       = 1'b0;
                 is_packet_out[1].csr_op        = rs_table[j].csr_op;
                 is_packet_out[1].valid         = rs_table[j].valid;
-		is_packet_out[1].func_unit     = rs_table[j].func_unit;
+                is_packet_out[1].func_unit     = rs_table[j].func_unit;
             end 
         end
         // $display("not_ready = %b", not_ready); 
@@ -287,33 +281,31 @@ module RS (
 
     always_comb begin
         is_packet_out[2] ={
-                    {$clog2(`ROBLEN){1'b0}}, // T
-                    `NOP,                    // inst
-                    {`XLEN{1'b0}},           // PC
-                    {`XLEN{1'b0}},           // NPC
+            {$clog2(`ROBLEN){1'b0}}, // T
+            `NOP,                    // inst
+            {`XLEN{1'b0}},           // PC
+            {`XLEN{1'b0}},           // NPC
 
-                    {`XLEN{1'b0}},           // RS1_value
-                    {`XLEN{1'b0}},           // RS2_value
-                    
-                    OPA_IS_RS1,              // OPA_SELECT
-                    OPB_IS_RS2,              // OPB_SELECT
-                    
-                    `ZERO_REG,               // dest_reg_idx
-                    ALU_ADD,                 // alu_func
+            {`XLEN{1'b0}},           // RS1_value
+            {`XLEN{1'b0}},           // RS2_value
+            
+            OPA_IS_RS1,              // OPA_SELECT
+            OPB_IS_RS2,              // OPB_SELECT
+            
+            `ZERO_REG,               // dest_reg_idx
+            ALU_ADD,                 // alu_func
 
-                    1'b0,                    // rd_mem
-                    1'b0,                    // wr_mem
-                    1'b0,                    // cond_branch
-                    1'b0,                    // uncond_branch
-                    1'b0,                    // halt
-                    1'b1,                    // illegal
-                    1'b0,                    // csr_op
-                    1'b0,                     // valid
+            1'b0,                    // rd_mem
+            1'b0,                    // wr_mem
+            1'b0,                    // cond_branch
+            1'b0,                    // uncond_branch
+            1'b0,                    // halt
+            1'b1,                    // illegal
+            1'b0,                    // csr_op
+            1'b0,                     // valid
 	 	    FUNC_NOP                 //func_unit
-                };
+        };
         for (int k=0; k<`RSLEN; k++) begin
-            // FU detect hazard
-
             // Packet out
             if (rs_is_posi[2][k] == 1 && ~reset) begin
                 //posi[i] <= 0;
@@ -337,10 +329,9 @@ module RS (
                 is_packet_out[2].illegal       = 1'b0;
                 is_packet_out[2].csr_op        = rs_table[k].csr_op;
                 is_packet_out[2].valid         = rs_table[k].valid;
-		is_packet_out[2].func_unit     = rs_table[k].func_unit;
+		        is_packet_out[2].func_unit     = rs_table[k].func_unit;
             end 
         end
-        // $display("not_ready = %b", not_ready); 
     end
     
     // Empty lines count 
