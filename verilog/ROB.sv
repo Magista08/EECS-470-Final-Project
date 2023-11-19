@@ -222,6 +222,9 @@ module ROB (
     assign IF_packet_out.empty_num = (count>3) ? 3 : count;
 
     always_ff @(posedge clock) begin
+	$display("rob_T[0]:%h rob_R[0]:%h rob_valid[0]:%b des_reg_valid[0]:%b", MT_packet_out[0].T, MT_packet_out[0].R, MT_packet_out[0].valid, DP_packet_in[0].dest_reg_valid);
+	$display("rob_T[1]:%h rob_R[1]:%h rob_valid[1]:%b des_reg_valid[1]:%b", MT_packet_out[1].T, MT_packet_out[1].R, MT_packet_out[1].valid, DP_packet_in[1].dest_reg_valid);
+	$display("rob_T[2]:%h rob_R[2]:%h rob_valid[2]:%b des_reg_valid[2]:%b", MT_packet_out[2].T, MT_packet_out[2].R, MT_packet_out[2].valid, DP_packet_in[2].dest_reg_valid);
         if (reset || squash_flag) begin
             rob_table    <= '{`ROBLEN {0}};
             head         <=  0;

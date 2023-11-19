@@ -48,7 +48,7 @@ module DEC (
         rs1_instruction = 0;
         rs2_instruction = 0;
 
-        dest_reg_valid = 1;
+        dest_reg_valid = valid;
 
         func_unit = FUNC_ALU;
 

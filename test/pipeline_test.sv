@@ -52,9 +52,9 @@ module testbench;
     logic [3:0]       mem2proc_response;
     logic [63:0]      mem2proc_data;
     logic [3:0]       mem2proc_tag;
-//`ifndef CACHE_MODE
+`ifndef CACHE_MODE
     MEM_SIZE          proc2mem_size;
-//`endif
+`endif
 
     logic [2:0][3:0]       pipeline_completed_insts;
     EXCEPTION_CODE    pipeline_error_status;

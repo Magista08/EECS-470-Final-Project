@@ -24,7 +24,7 @@ logic [1:0] if_packet_size;
 IF_ID_PACKET [BUFFER_DEPTH-1:0] slot;
 IF_ID_PACKET [BUFFER_DEPTH-1:0] n_slot;
 
-assign insn_buffer_empty = (wptr == rptr) || (wptr == rptr+1) || (wptr == rptr+2);
+assign insn_buffer_empty = (wptr == rptr);
 //
 assign insn_buffer_full = (wptr == {~rptr[PTR_DEPTH-1], rptr[PTR_DEPTH-2:0]})   || 
 						  (wptr+1 == {~rptr[PTR_DEPTH-1], rptr[PTR_DEPTH-2:0]}) || 
@@ -125,7 +125,7 @@ always_comb begin
 		ib_dp_packet_out[2].PC    =  0;
 		ib_dp_packet_out[2].NPC   =  0;
 		ib_dp_packet_out[2].valid =  0;
-		
+	
 	end else if(dp_packet_count == 2'b10) begin
 		ib_dp_packet_out[0]       =  slot[rptr[PTR_DEPTH-2:0]];
 		ib_dp_packet_out[1]       =  slot[rptr1[PTR_DEPTH-2:0]];
@@ -162,25 +162,25 @@ always_ff @(posedge clock) begin
 	if(reset || squash_flag) begin
 		wptr <= 0;
 		rptr <= 0;
-		slot[0].inst  =  `NOP;
-		slot[0].PC    =  0;
-		slot[0].NPC   =  0;
-		slot[0].valid =  0;
-		slot[1].inst  =  `NOP;
-		slot[1].PC    =  0;
-		slot[1].NPC   =  0;
-		slot[1].valid =  0;
-		slot[2].inst  =  `NOP;
-		slot[2].PC    =  0;
-		slot[2].NPC   =  0;
-		slot[2].valid =  0;
+		slot[0].inst  <=  `NOP;
+		slot[0].PC    <=  0;
+		slot[0].NPC   <=  0;
+		slot[0].valid <=  0;
+		slot[1].inst  <=  `NOP;
+		slot[1].PC    <=  0;
+		slot[1].NPC   <=  0;
+		slot[1].valid <=  0;
+		slot[2].inst  <=  `NOP;
+		slot[2].PC    <=  0;
+		slot[2].NPC   <=  0;
+		slot[2].valid <=  0;
 	end else if (enable) begin
 		if(!insn_buffer_full) begin 
-			wptr <= n_wptr;
-			slot <= n_slot;
+			wptr <= #1 n_wptr;
+			slot <= #1 n_slot;
 		end 
 		if (!insn_buffer_empty) begin
-			rptr <= n_rptr;
+			rptr <= #1 n_rptr;
 		end
 	end
 $display("wptr:%b, rptr:%b", wptr, rptr);

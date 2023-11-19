@@ -86,9 +86,10 @@ module pipeline (
     logic halt;
 
 
-    always @(negedge clock) begin
+    always @(posedge clock) begin
         $display("-------------------------------------------------------------------------------------------------------");
         $display("instruction[1]:%b, instruciton[0]:%b", mem2proc_data[63:32], mem2proc_data[31:0]);
+        $display("squash_flag:%b", squash_flag);
         $display("proc2mem_addr:%b proc2Imem_addr:%b", proc2mem_addr, proc2Imem_addr);
         $display("if_NPC[0]:%h if_inst[0]:%h if_valid[0]:%b", if_ib_packet[0].NPC, if_ib_packet[0].inst, if_ib_packet[0].valid);
         $display("if_NPC[1]:%h if_inst[1]:%h if_valid[1]:%b", if_ib_packet[1].NPC, if_ib_packet[1].inst, if_ib_packet[1].valid);
@@ -96,15 +97,15 @@ module pipeline (
         $display("ib_NPC[0]:%h ib_inst[0]:%h ib_valid[0]:%b, rob_empty_num:%d, rs_empty_num: %d", if_NPC_dbg[0], if_inst_dbg[0], if_valid_dbg[0], rob_if_packet.empty_num, rs_if_packet.empty_num);
         $display("ib_NPC[1]:%h ib_inst[1]:%h ib_valid[1]:%b, rob_empty_num:%d, rs_empty_num: %d", if_NPC_dbg[1], if_inst_dbg[1], if_valid_dbg[1], rob_if_packet.empty_num, rs_if_packet.empty_num);
         $display("ib_NPC[2]:%h ib_inst[2]:%h ib_valid[2]:%b, rob_empty_num:%d, rs_empty_num: %d", if_NPC_dbg[2], if_inst_dbg[2], if_valid_dbg[2], rob_if_packet.empty_num, rs_if_packet.empty_num);
-        $display("dp_NPC[0]:%h dp_inst[0]:%h dp_valid[0]:%b", dp_packet_out[0].NPC, dp_packet_out[0].inst, ~dp_packet_out[0].illegal);
-        $display("dp_NPC[1]:%h dp_inst[1]:%h dp_valid[1]:%b", dp_packet_out[1].NPC, dp_packet_out[1].inst, ~dp_packet_out[1].illegal);
-        $display("dp_NPC[2]:%h dp_inst[2]:%h dp_valid[2]:%b", dp_packet_out[2].NPC, dp_packet_out[2].inst, ~dp_packet_out[2].illegal);
-        $display("is_NPC[0]:%h is_inst[0]:%h is_valid[0]:%b is_tag[0]:%h", is_NPC_dbg[0], is_inst_dbg[0], is_valid_dbg[0], is_ex_reg[0].T);
-        $display("is_NPC[1]:%h is_inst[1]:%h is_valid[1]:%b is_tag[1]:%h", is_NPC_dbg[1], is_inst_dbg[1], is_valid_dbg[1], is_ex_reg[1].T);
-        $display("is_NPC[2]:%h is_inst[2]:%h is_valid[2]:%b is_tag[2]:%h", is_NPC_dbg[2], is_inst_dbg[2], is_valid_dbg[2], is_ex_reg[2].T);
-        $display("cdb_NPC[0]:%h cdb_valid[0]:%b cdb_tag[0]:%h", cdb_NPC_dbg[0], cdb_valid_dbg[0], cdb_rob_packet[0].tag);
-        $display("cdb_NPC[1]:%h cdb_valid[1]:%b cdb_tag[1]:%h", cdb_NPC_dbg[1], cdb_valid_dbg[1], cdb_rob_packet[1].tag);
-        $display("cdb_NPC[2]:%h cdb_valid[2]:%b cdb_tag[2]:%h", cdb_NPC_dbg[2], cdb_valid_dbg[2], cdb_rob_packet[2].tag);
+        //$display("dp_NPC[0]:%h dp_inst[0]:%h dp_valid[0]:%b, dp_rs1_value[0]: %d, dp_rs2_value[0]: %d", dp_packet_out[0].NPC, dp_packet_out[0].inst, ~dp_packet_out[0].illegal, dp_packet_out[0].rs1_value, dp_packet_out[0].rs2_value);
+        //$display("dp_NPC[1]:%h dp_inst[1]:%h dp_valid[1]:%b, dp_rs1_value[1]: %d, dp_rs2_value[1]: %d", dp_packet_out[1].NPC, dp_packet_out[1].inst, ~dp_packet_out[1].illegal, dp_packet_out[1].rs1_value, dp_packet_out[0].rs2_value);
+        //$display("dp_NPC[2]:%h dp_inst[2]:%h dp_valid[2]:%b, dp_rs1_value[2]: %d, dp_rs2_value[0]: %d", dp_packet_out[2].NPC, dp_packet_out[2].inst, ~dp_packet_out[2].illegal, dp_packet_out[1].rs1_value, dp_packet_out[0].rs2_value);
+        $display("is_NPC[0]:%h is_inst[0]:%h is_valid[0]:%b is_tag[0]:%h, is_value[0].rs1_value: %d, is_value[0].rs2_value: %d", is_NPC_dbg[0], is_inst_dbg[0], is_valid_dbg[0], is_ex_reg[0].T, is_ex_reg[0].rs1_value, is_ex_reg[0].rs2_value);
+        $display("is_NPC[1]:%h is_inst[1]:%h is_valid[1]:%b is_tag[1]:%h, is_value[1].rs1_value: %d, is_value[1].rs2_value: %d", is_NPC_dbg[1], is_inst_dbg[1], is_valid_dbg[1], is_ex_reg[1].T, is_ex_reg[1].rs1_value, is_ex_reg[1].rs2_value);
+        $display("is_NPC[2]:%h is_inst[2]:%h is_valid[2]:%b is_tag[2]:%h, is_value[2].rs1_value: %d, is_value[2].rs2_value: %d", is_NPC_dbg[2], is_inst_dbg[2], is_valid_dbg[2], is_ex_reg[2].T, is_ex_reg[2].rs1_value, is_ex_reg[2].rs2_value);
+        $display("cdb_NPC[0]:%h cdb_valid[0]:%b cdb_tag[0]:%h, cdb_rob_packet[0].value: %d", cdb_NPC_dbg[0], cdb_valid_dbg[0], cdb_rob_packet[0].tag, cdb_rob_packet[0].value);
+        $display("cdb_NPC[1]:%h cdb_valid[1]:%b cdb_tag[1]:%h, cdb_rob_packet[1].value: %d", cdb_NPC_dbg[1], cdb_valid_dbg[1], cdb_rob_packet[1].tag, cdb_rob_packet[1].value);
+        $display("cdb_NPC[2]:%h cdb_valid[2]:%b cdb_tag[2]:%h, cdb_rob_packet[2].value: %d", cdb_NPC_dbg[2], cdb_valid_dbg[2], cdb_rob_packet[2].tag, cdb_rob_packet[2].value);
         $display("rt_NPC[0]:%h rt_valid[0]:%b", rt_NPC_dbg[0], rt_valid_dbg[0]);
         $display("rt_NPC[1]:%h rt_valid[1]:%b", rt_NPC_dbg[1], rt_valid_dbg[1]);
         $display("rt_NPC[2]:%h rt_valid[2]:%b", rt_NPC_dbg[2], rt_valid_dbg[2]);
@@ -455,8 +456,8 @@ module pipeline (
     assign pipeline_commit_wr_data[0] = rt_dp_packet[0].value;
     assign pipeline_commit_wr_data[1] = rt_dp_packet[1].value;
     assign pipeline_commit_wr_data[2] = rt_dp_packet[2].value;
-    assign pipeline_commit_NPC[0]     = (rt_valid[0]) ? rt_NPC[2] : {`XLEN{1'b0}};
-    assign pipeline_commit_NPC[1]     = (rt_valid[1]) ? rt_NPC[2] : {`XLEN{1'b0}};
+    assign pipeline_commit_NPC[0]     = (rt_valid[0]) ? rt_NPC[0] : {`XLEN{1'b0}};
+    assign pipeline_commit_NPC[1]     = (rt_valid[1]) ? rt_NPC[1] : {`XLEN{1'b0}};
     assign pipeline_commit_NPC[2]     = (rt_valid[2]) ? rt_NPC[2] : {`XLEN{1'b0}};
 
 endmodule // pipeline

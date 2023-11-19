@@ -21,7 +21,7 @@ module stage_if (
 	input [`XLEN-1:0] squash_pc,
 
     output IF_ID_PACKET     [2:0]         if_dp_packet_out,
-    output logic   [2:0] [`XLEN-1:0]      proc2Imem_addr, // address sent to Instruction memory 
+    output logic   [`XLEN-1:0]      proc2Imem_addr, // address sent to Instruction memory 
 	output logic   [2:0] [`XLEN-1:0]      PC_reg,
 	output logic   [2:0] [`XLEN-1:0]      NPC_reg
 );
@@ -64,11 +64,11 @@ module stage_if (
 				if_dp_packet_out[j].valid= 0;			
 			end
 		end else begin
-			if_dp_packet_out[0].inst  = (~if_valid || Imem2proc_data === 64'h0000_0000_0000_0000 || Imem2proc_data === 64'hxxxx_xxxx_xxxx_xxxx) ? `NOP :
+			if_dp_packet_out[0].inst  = (~if_valid || Imem2proc_data === 64'hxxxx_xxxx_xxxx_xxxx) ? `NOP :
 										PC_reg[0][2] ? Imem2proc_data[63:32] : Imem2proc_data[31:0];	
 			if_dp_packet_out[0].PC    = PC_reg[0];
 			if_dp_packet_out[0].NPC   = PC_reg[0] + 4;
-			if_dp_packet_out[0].valid = ~(~if_valid || Imem2proc_data === 64'h0000_0000_0000_0000 || Imem2proc_data === 64'hxxxx_xxxx_xxxx_xxxx);
+			if_dp_packet_out[0].valid = ~(~if_valid || Imem2proc_data === 64'hxxxx_xxxx_xxxx_xxxx);
 
 			if_dp_packet_out[1].inst  = (~if_valid || Imem2proc_data === 64'h0000_0000_0000_0000 || Imem2proc_data === 64'hxxxx_xxxx_xxxx_xxxx) ? `NOP :
 										PC_reg[1][2] ? Imem2proc_data[63:32] : Imem2proc_data[31:0];	
