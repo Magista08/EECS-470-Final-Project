@@ -15,9 +15,10 @@ module DP(
 genvar de;
 generate
     for (de = 0; de < `N; de = de + 1) begin: de_0
-        assign dp_packet[de].inst = if_id_packet[de].inst;
-        assign dp_packet[de].PC   = if_id_packet[de].PC;
-        assign dp_packet[de].NPC  = if_id_packet[de].NPC;
+        assign dp_packet[de].inst  = if_id_packet[de].inst;
+        assign dp_packet[de].PC    = if_id_packet[de].PC;
+        assign dp_packet[de].NPC   = if_id_packet[de].NPC;
+        // assign dp_packet[de].valid = if_id_packet[de].valid & ~dp_packet[de].illegal;
         
         DEC deco(
             // Input

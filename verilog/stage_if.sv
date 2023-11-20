@@ -64,19 +64,19 @@ module stage_if (
 				if_dp_packet_out[j].valid= 0;			
 			end
 		end else begin
-			if_dp_packet_out[0].inst  = (~if_valid || Imem2proc_data === 64'hxxxx_xxxx_xxxx_xxxx) ? `NOP :
+			if_dp_packet_out[0].inst  = (~if_valid || (PC_reg[0][2] && Imem2proc_data[63:32] == 32'h0000_0000) || (~PC_reg[0][2] && Imem2proc_data[31:0] == 32'h0000_0000) || Imem2proc_data === 64'hxxxx_xxxx_xxxx_xxxx) ? `NOP :
 										PC_reg[0][2] ? Imem2proc_data[63:32] : Imem2proc_data[31:0];	
 			if_dp_packet_out[0].PC    = PC_reg[0];
 			if_dp_packet_out[0].NPC   = PC_reg[0] + 4;
-			if_dp_packet_out[0].valid = ~(~if_valid || Imem2proc_data === 64'hxxxx_xxxx_xxxx_xxxx);
+			if_dp_packet_out[0].valid = ~(~if_valid || Imem2proc_data === 64'hxxxx_xxxx_xxxx_xxxx || (PC_reg[0][2] && Imem2proc_data[63:32] == `NOP) || (~PC_reg[0][2] && Imem2proc_data[31:0] == `NOP) || (PC_reg[0][2] && Imem2proc_data[63:32] == 32'h0000_0000) || (~PC_reg[0][2] && Imem2proc_data[31:0] == 32'h0000_0000));
 
-			if_dp_packet_out[1].inst  = (~if_valid || Imem2proc_data === 64'h0000_0000_0000_0000 || Imem2proc_data === 64'hxxxx_xxxx_xxxx_xxxx) ? `NOP :
+			if_dp_packet_out[1].inst  = (~if_valid || Imem2proc_data === 64'hxxxx_xxxx_xxxx_xxxx) ? `NOP :
 										PC_reg[1][2] ? Imem2proc_data[63:32] : Imem2proc_data[31:0];	
 			if_dp_packet_out[1].PC    = PC_reg[1];
 			if_dp_packet_out[1].NPC   = PC_reg[1] + 4;
 			if_dp_packet_out[1].valid = 0; //if_valid
 	
-			if_dp_packet_out[2].inst  = (~if_valid || Imem2proc_data === 64'h0000_0000_0000_0000 || Imem2proc_data === 64'hxxxx_xxxx_xxxx_xxxx) ? `NOP :
+			if_dp_packet_out[2].inst  = (~if_valid || Imem2proc_data === 64'hxxxx_xxxx_xxxx_xxxx) ? `NOP :
 										PC_reg[2][2] ? Imem2proc_data[63:32] : Imem2proc_data[31:0];	
 			if_dp_packet_out[2].PC    = PC_reg[2];
 			if_dp_packet_out[2].NPC   = PC_reg[2] + 4;

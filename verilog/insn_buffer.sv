@@ -20,7 +20,7 @@ logic [1:0] dp_packet_count;
 logic [1:0] m, n;
 logic [PTR_DEPTH-1:0] wptr, n_wptr, wptr1, wptr2;
 logic [PTR_DEPTH-1:0] rptr, n_rptr, rptr1, rptr2;
-logic [1:0] if_packet_size;
+logic [1:0] if_packet_size, ready_insn_size;
 IF_ID_PACKET [BUFFER_DEPTH-1:0] slot;
 IF_ID_PACKET [BUFFER_DEPTH-1:0] n_slot;
 
@@ -31,8 +31,9 @@ assign insn_buffer_full = (wptr == {~rptr[PTR_DEPTH-1], rptr[PTR_DEPTH-2:0]})   
 						  (wptr+2 == {~rptr[PTR_DEPTH-1], rptr[PTR_DEPTH-2:0]});
 // how many packet can i send to dispatch
 assign if_packet_size = n_wptr - wptr;
-assign m = (if_packet_size <= ROB_blank_number)? if_packet_size : ROB_blank_number;
-assign n = (if_packet_size <= RS_blank_number)? if_packet_size : RS_blank_number;
+assign ready_insn_size = wptr - rptr;
+assign m = (ready_insn_size <= ROB_blank_number)? ready_insn_size : ROB_blank_number;
+assign n = (ready_insn_size <= RS_blank_number)? ready_insn_size : RS_blank_number;
 assign dp_packet_count = (m<=n) ? m : n;
 // find the size of the if_packt
 
@@ -81,9 +82,6 @@ always_comb begin
 end
 
 
-
-
-
 always_comb begin
 	if(dp_packet_count == 2'b01) begin
 		n_rptr = rptr + 1;
@@ -98,7 +96,7 @@ end
 
 
 always_comb begin
-	if(reset || dp_packet_count == 2'b00) begin
+	if(reset || insn_buffer_full || dp_packet_count == 2'b00) begin
 		ib_dp_packet_out[0].inst  =  `NOP;
 		ib_dp_packet_out[0].PC    =  0;
 		ib_dp_packet_out[0].NPC   =  0;
@@ -176,14 +174,15 @@ always_ff @(posedge clock) begin
 		slot[2].valid <=  0;
 	end else if (enable) begin
 		if(!insn_buffer_full) begin 
-			wptr <= #1 n_wptr;
-			slot <= #1 n_slot;
+			wptr <=  n_wptr;
+			slot <=  n_slot;
 		end 
 		if (!insn_buffer_empty) begin
-			rptr <= #1 n_rptr;
+			rptr <=  n_rptr;
 		end
 	end
 $display("wptr:%b, rptr:%b", wptr, rptr);
+$display("ready_inst_in_buffer:%b", ready_insn_size);
 end
 
 endmodule

@@ -77,7 +77,9 @@ module RS (
     logic [`RSLEN-1:0]    masked_not_ready;
     
 
-
+    // Display
+    logic [$clog2(`ROBLEN)-1:0] display_T1, display_T2;
+    logic [$clog2(`RSLEN)-1:0] display_line_id;
 
 
     // Update RS Table
@@ -169,6 +171,11 @@ module RS (
     assign clear_signal = (reset || squash_flag) ? {`ROBLEN{1'b0}} : rs_is_posi_line;
 
     always_comb begin
+        // $display("clear_signal = %b", clear_signal);
+        // $display("not_ready = %b", not_ready);
+        display_T1 = 0;
+        display_T2 = 0;
+        display_line_id = 0;
         is_packet_out[0] ={
             {$clog2(`ROBLEN){1'b0}}, // T
             `NOP,                    // inst
@@ -219,6 +226,9 @@ module RS (
                 is_packet_out[0].csr_op        = rs_table[i].csr_op;
                 is_packet_out[0].valid         = rs_table[i].valid;
 		        is_packet_out[0].func_unit     = rs_table[i].func_unit;
+                display_T1 = rs_table[i].T1;
+                display_T2 = rs_table[i].T2;
+                display_line_id = i;
             end 
         end
     end
@@ -308,6 +318,7 @@ module RS (
         for (int k=0; k<`RSLEN; k++) begin
             // Packet out
             if (rs_is_posi[2][k] == 1 && ~reset) begin
+                // $display("rs_is_posi[2][%d] = %b", k, rs_is_posi[2][k]);
                 //posi[i] <= 0;
                 is_packet_out[2].T             = rs_table[k].T;
                 is_packet_out[2].inst          = rs_table[k].inst;
@@ -361,6 +372,10 @@ module RS (
         .gnt2(slots[2])
     );
 
+    always_ff @(posedge clock) begin
+	    $display("count:%d is_packet[0].T1: %h is_packet[0].T1:%h, line_id:%d", count, display_T1, display_T2, display_line_id);
+        $display("rs_line[0].V2:%h", rs_table[0].V2);
+    end
     
     
 endmodule 

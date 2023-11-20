@@ -99,60 +99,62 @@ module RS_ONE_LINE (
 			if (enable) begin
 				// when instruction fetched is not a noop -- insert a new inst.
 				if (dp_packet.inst != `NOP) begin
-					// data from ROB,MT,CDB
-					n_rs_line.valid1 = valid_flag1;
-					n_rs_line.valid2 = valid_flag2;
+
+					n_rs_line.busy = 1; // busy = 1 when enable
 					n_rs_line.RSID = line_id;
 					n_rs_line.T = rob_packet.T;
-					// n_rs_line.T1 = valid_flag1? 0: mt_packet.T1; // 1.Cycle problem? 2.RS tags in RS are from MT
-					// n_rs_line.T2 = valid_flag2? 0: mt_packet.T2;
 
+					// 3 dispatch RAW
 					if (my_position == 2'b00) begin
 						n_rs_line.T1 = valid_flag1? 0:mt_packet.T1;
+						n_rs_line.T2 = valid_flag2? 0:mt_packet.T2;
+
+						n_rs_line.valid1 = valid_flag1;
+						n_rs_line.valid2 = valid_flag2;
+
 					end else if (my_position == 2'b01) begin
 						n_rs_line.T1 = (dp_packet.rs1_instruction && dp_packet.inst.r.rs1 == other_dest_reg1 && other_dest_reg1 != `ZERO_REG)? other_T1:
 									    valid_flag1? 0:
 										mt_packet.T1;
+						n_rs_line.T2 = (dp_packet.rs2_instruction && dp_packet.inst.r.rs2 == other_dest_reg1 && other_dest_reg1 != `ZERO_REG)? other_T1:
+									    valid_flag2? 0:
+										mt_packet.T2;
+
+						n_rs_line.valid1 = (dp_packet.rs1_instruction && dp_packet.inst.r.rs1 == other_dest_reg1 && other_dest_reg1 != `ZERO_REG)? 0:
+										    valid_flag1;
+						n_rs_line.valid2 = (dp_packet.rs2_instruction && dp_packet.inst.r.rs2 == other_dest_reg2 && other_dest_reg2 != `ZERO_REG)? 0:
+										    valid_flag2;
+
 					end else begin
 						n_rs_line.T1 = (dp_packet.rs1_instruction && dp_packet.inst.r.rs1 == other_dest_reg2 && other_dest_reg2 != `ZERO_REG)? other_T2:
 									   (dp_packet.rs1_instruction && dp_packet.inst.r.rs1 == other_dest_reg1 && other_dest_reg1 != `ZERO_REG)? other_T1:
 									   	valid_flag1? 0:
 										mt_packet.T1;
-					end
-
-					if (my_position == 2'b00) begin
-						n_rs_line.T2 = valid_flag2? 0:mt_packet.T2;
-					end else if (my_position == 2'b01) begin
-						n_rs_line.T2 = (dp_packet.rs2_instruction && dp_packet.inst.r.rs2 == other_dest_reg1 && other_dest_reg1 != `ZERO_REG)? other_T1:
-									    valid_flag2? 0:
-										mt_packet.T2;
-					end else begin
 						n_rs_line.T2 = (dp_packet.rs2_instruction && dp_packet.inst.r.rs2 == other_dest_reg2 && other_dest_reg2 != `ZERO_REG)? other_T2:
 									   (dp_packet.rs2_instruction && dp_packet.inst.r.rs2 == other_dest_reg1 && ~other_dest_reg1)? other_T1:
 									   	valid_flag2? 0:
 										mt_packet.T2;
-					end 
 
-					n_rs_line.busy = 1;                          // busy = 1 when enable
+						n_rs_line.valid1 = ((dp_packet.rs1_instruction && dp_packet.inst.r.rs1 == other_dest_reg2 && other_dest_reg2 != `ZERO_REG) ||
+										    (dp_packet.rs1_instruction && dp_packet.inst.r.rs1 == other_dest_reg1 && other_dest_reg1 != `ZERO_REG))? 0:
+										     valid_flag1;
+						n_rs_line.valid2 = ((dp_packet.rs2_instruction && dp_packet.inst.r.rs2 == other_dest_reg2 && other_dest_reg2 != `ZERO_REG) ||
+										    (dp_packet.rs2_instruction && dp_packet.inst.r.rs2 == other_dest_reg1 && other_dest_reg1 != `ZERO_REG))? 0:
+										     valid_flag2;
+					end
 
 					// data from ROB, CDB, Regfile
-					n_rs_line.V1 = (cdb_packet[0].valid && mt_packet.T1 == cdb_packet[0].tag)? cdb_packet[0].value:
-								   (cdb_packet[1].valid && mt_packet.T1 == cdb_packet[1].tag)? cdb_packet[1].value:
-								   (cdb_packet[2].valid && mt_packet.T1 == cdb_packet[2].tag)? cdb_packet[2].value:
+					n_rs_line.V1 = (cdb_packet[0].valid && mt_packet.valid1 && mt_packet.T1 == cdb_packet[0].tag)? cdb_packet[0].value:
+								   (cdb_packet[1].valid && mt_packet.valid1 && mt_packet.T1 == cdb_packet[1].tag)? cdb_packet[1].value:
+								   (cdb_packet[2].valid && mt_packet.valid1 && mt_packet.T1 == cdb_packet[2].tag)? cdb_packet[2].value:
 								   (rob_packet.valid1 && mt_packet.valid1 && mt_packet.T1_plus)? rob_packet.V1:
 								    dp_packet.rs1_value;
 
-					n_rs_line.V2 = (cdb_packet[0].valid && mt_packet.T2 == cdb_packet[0].tag)? cdb_packet[0].value:
-								   (cdb_packet[1].valid && mt_packet.T2 == cdb_packet[1].tag)? cdb_packet[1].value:
-								   (cdb_packet[2].valid && mt_packet.T2 == cdb_packet[2].tag)? cdb_packet[2].value:
+					n_rs_line.V2 = (cdb_packet[0].valid && mt_packet.valid2 && mt_packet.T2 == cdb_packet[0].tag)? cdb_packet[0].value:
+								   (cdb_packet[1].valid && mt_packet.valid2 && mt_packet.T2 == cdb_packet[1].tag)? cdb_packet[1].value:
+								   (cdb_packet[2].valid && mt_packet.valid2 && mt_packet.T2 == cdb_packet[2].tag)? cdb_packet[2].value:
 								   (rob_packet.valid2 && mt_packet.valid2 && mt_packet.T2_plus)? rob_packet.V2:
-								    dp_packet.rs2_value;
-													
-					
-					// n_rs_line.V1 = (dp_packet.T1 == cdb_packet.tag)? cdb_packet.value: 
-					// 			   (~mt_packet.valid1)? dp_packet.rs1_value: 
-					// 			   (mt_packet.T1_plus)? rob_packet.V1: 0;
-					// n_rs_line.V2 = (dp_packet.T2 == cdb_packet.tag)? cdb_packet.value: (~mt_packet.valid1) ? dp_packet.rs1_value : (mt_packet.T1_plus)? rob_packet.V1: 0;
+								    dp_packet.rs2_value;											
 					
 										
 					n_rs_line.inst = dp_packet.inst;
@@ -172,11 +174,13 @@ module RS_ONE_LINE (
 					n_rs_line.valid = dp_packet.valid;
 					n_rs_line.func_unit = dp_packet.func_unit;
 
-					if (valid_flag1 && valid_flag2) begin            // not_ready is to decide 'issue'
-						not_ready_flag = 0;
-					end else begin
-						not_ready_flag = 1;
-					end
+					// if (valid_flag1 && valid_flag2) begin // not_ready is to decide 'issue'
+					// 	not_ready_flag = 0;
+					// end else begin
+					// 	not_ready_flag = 1;
+					// end
+					not_ready_flag = ~(n_rs_line.valid1 && n_rs_line.valid2); // I think that should be enough
+
 				// inst == NOP condition
 				end else begin
 					n_rs_line = '{
@@ -251,32 +255,30 @@ module RS_ONE_LINE (
 										(cdb_packet[2].valid && rs_line.T2 == cdb_packet[2].tag)) ? 1 : rs_line.valid2;
 					n_rs_line.RSID = rs_line.RSID;
 					n_rs_line.T = rs_line.T;
-					n_rs_line.T1 = ((cdb_packet[0].valid && rs_line.T1 == cdb_packet[0].tag) || 
-									(cdb_packet[1].valid && rs_line.T1 == cdb_packet[1].tag) ||
-									(cdb_packet[2].valid && rs_line.T1 == cdb_packet[2].tag)) ? 0 :
-									(rs_line.T1 == mt_packet.T1_plus) ? 0 : rs_line.T1; // 1.Cycle problem? 2.RS tags in RS are from MT
-					n_rs_line.T2 = ((cdb_packet[0].valid && rs_line.T2 == cdb_packet[0].tag) || 
-									(cdb_packet[1].valid && rs_line.T2 == cdb_packet[1].tag) ||
-									(cdb_packet[2].valid && rs_line.T2 == cdb_packet[2].tag)) ? 0 :
-									(rs_line.T2 == mt_packet.T2_plus) ? 0 : rs_line.T2;
+					// n_rs_line.T1 = ((cdb_packet[0].valid && rs_line.T1 == cdb_packet[0].tag) || 
+					// 				(cdb_packet[1].valid && rs_line.T1 == cdb_packet[1].tag) ||
+					// 				(cdb_packet[2].valid && rs_line.T1 == cdb_packet[2].tag)) ? 0 : rs_line.T1;
+					// 				//(rs_line.T1 == mt_packet.T1_plus) ? 0 : rs_line.T1; // 1.Cycle problem? 2.RS tags in RS are from MT
+					// n_rs_line.T2 = ((cdb_packet[0].valid && rs_line.T2 == cdb_packet[0].tag) || 
+					// 				(cdb_packet[1].valid && rs_line.T2 == cdb_packet[1].tag) ||
+					// 				(cdb_packet[2].valid && rs_line.T2 == cdb_packet[2].tag)) ? 0 : rs_line.T2;
+					// 				//(rs_line.T2 == mt_packet.T2_plus) ? 0 : rs_line.T2;
+					n_rs_line.T1 = rs_line.T1;
+					n_rs_line.T2 = rs_line.T2;
 					n_rs_line.busy = 1;                          // busy = 1 before entering exe
-
-
-					// n_rs_line.V1 = (rs_line.T1 == cdb_packet.tag)? cdb_packet.value:mt_packet.T1_plus? dp_packet.rs1_value: rs_line.V1;  // value要改
-					// n_rs_line.V2 = (rs_line.T2 == cdb_packet.tag)? cdb_packet.value:(rs_line.T2 == mt_packet.T2_plus)? dp_packet.rs2_value: rs_line.V2;   // value要改
 					
 
-					// CDB or no change
-					n_rs_line.V1 = (cdb_packet[0].valid && rs_line.T1 == cdb_packet[0].tag)? cdb_packet[0].value:
-								   (cdb_packet[1].valid && rs_line.T1 == cdb_packet[1].tag)? cdb_packet[1].value:
-								   (cdb_packet[2].valid && rs_line.T1 == cdb_packet[2].tag)? cdb_packet[2].value:
-								   rs_line.V1;
+					// From CDB or no change when busy=1
+					n_rs_line.V1 = (~rs_line.valid1 && cdb_packet[0].valid && rs_line.T1 == cdb_packet[0].tag)? cdb_packet[0].value:
+								   (~rs_line.valid1 && cdb_packet[1].valid && rs_line.T1 == cdb_packet[1].tag)? cdb_packet[1].value:
+								   (~rs_line.valid1 && cdb_packet[2].valid && rs_line.T1 == cdb_packet[2].tag)? cdb_packet[2].value:
+								    rs_line.V1;
 
 
-					n_rs_line.V2 = (cdb_packet[0].valid && rs_line.T2 == cdb_packet[0].tag)? cdb_packet[0].value:
-								   (cdb_packet[1].valid && rs_line.T2 == cdb_packet[1].tag)? cdb_packet[1].value:
-								   (cdb_packet[2].valid && rs_line.T2 == cdb_packet[2].tag)? cdb_packet[2].value:
-								   rs_line.V2;				
+					n_rs_line.V2 = (~rs_line.valid2 && cdb_packet[0].valid && rs_line.T2 == cdb_packet[0].tag)? cdb_packet[0].value:
+								   (~rs_line.valid2 && cdb_packet[1].valid && rs_line.T2 == cdb_packet[1].tag)? cdb_packet[1].value:
+								   (~rs_line.valid2 && cdb_packet[2].valid && rs_line.T2 == cdb_packet[2].tag)? cdb_packet[2].value:
+								    rs_line.V2;				
 					
 					
 					// below keeps unchanged
@@ -297,7 +299,8 @@ module RS_ONE_LINE (
 					n_rs_line.valid = rs_line.valid;
 					n_rs_line.func_unit = rs_line.func_unit;
 
-					not_ready_flag = n_rs_line.T1 || n_rs_line.T2;
+					// not_ready_flag = n_rs_line.T1 || n_rs_line.T2; // ?
+					not_ready_flag = ~(n_rs_line.valid1 && n_rs_line.valid2);
 
 				end
 
@@ -342,36 +345,6 @@ module RS_ONE_LINE (
 			rs_line   <= n_rs_line;
 			not_ready <= not_ready_flag;
 		end
-		// end else if(enable) begin
-		// 	rs_line <= n_rs_line;
-		// end else begin
-		// 	rs_line <= '{
-		// 		{$clog2(`RSLEN){1'b0}},  // RSID
-		// 		`NOP,             		 // inst
-		// 		1'b0,				  	 // busy
-		// 		{$clog2(`ROBLEN){1'b0}}, // T
-		// 		{$clog2(`ROBLEN){1'b0}}, // T1
-		// 		{$clog2(`ROBLEN){1'b0}}, // T2
-		// 		1'b0,			     	 // valid1
-		// 		1'b0,             		 // valid2
-		// 		{`XLEN{1'b0}},           // V1
-		// 		{`XLEN{1'b0}},           // V2
-		// 		{`XLEN{1'b0}},           // PC
-		// 		{`XLEN{1'b0}},			 // NPC
-		// 		OPA_IS_RS1,       		 // opa_select
-		// 		OPB_IS_RS2,       		 // opb_select
-		// 		`ZERO_REG,       		 // dest_reg_idx
-		// 		ALU_ADD,         		 // alu_func
-		// 		1'b0,				     // rd_mem
-		// 		1'b0,				     // wr_mem
-		// 		1'b0,				     // cond_branch
-		// 		1'b0,                    // uncond_branch
-		// 		1'b0,				     // halt
-		// 		1'b0,			         // illegal
-		// 		1'b0,				     // csr_op
-		// 		1'b0				     // valid
-		// 	};
-		// end
 	end
 	
 endmodule

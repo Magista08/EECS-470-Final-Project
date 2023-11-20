@@ -263,14 +263,32 @@ module testbench;
                  proc2mem_data[63:32], proc2mem_data[31:0]);
 
             // print register write information to the writeback output file
-            if (pipeline_completed_insts > 0) begin
-                if(pipeline_commit_wr_en)
+            if (pipeline_completed_insts[0] > 0) begin
+                if(pipeline_commit_wr_en[0])
                     $fdisplay(wb_fileno, "PC=%x, REG[%d]=%x",
-                              pipeline_commit_NPC - 4,
-                              pipeline_commit_wr_idx,
-                              pipeline_commit_wr_data);
+                              pipeline_commit_NPC[0] - 4,
+                              pipeline_commit_wr_idx[0],
+                              pipeline_commit_wr_data[0]);
                 else
-                    $fdisplay(wb_fileno, "PC=%x, ---", pipeline_commit_NPC - 4);
+                    $fdisplay(wb_fileno, "PC=%x, ---", pipeline_commit_NPC[0] - 4);
+            end
+	    if (pipeline_completed_insts[1] > 0) begin
+                if(pipeline_commit_wr_en[1])
+                    $fdisplay(wb_fileno, "PC=%x, REG[%d]=%x",
+                              pipeline_commit_NPC[1] - 4,
+                              pipeline_commit_wr_idx[1],
+                              pipeline_commit_wr_data[1]);
+                else
+                    $fdisplay(wb_fileno, "PC=%x, ---", pipeline_commit_NPC[1] - 4);
+            end
+	    if (pipeline_completed_insts[2] > 0) begin
+                if(pipeline_commit_wr_en[2])
+                    $fdisplay(wb_fileno, "PC=%x, REG[%d]=%x",
+                              pipeline_commit_NPC[2] - 4,
+                              pipeline_commit_wr_idx[2],
+                              pipeline_commit_wr_data[2]);
+                else
+                    $fdisplay(wb_fileno, "PC=%x, ---", pipeline_commit_NPC[2] - 4);
             end
 
             // deal with any halting conditions

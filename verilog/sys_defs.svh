@@ -25,7 +25,7 @@
 
 // sizes
 `define ROBLEN 32
-`define RSLEN 16
+`define RSLEN 32
 //`define PHYS_REG_SZ (32 + `ROB_SZ)
 
 // worry about these later
