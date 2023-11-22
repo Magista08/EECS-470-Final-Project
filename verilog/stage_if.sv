@@ -40,7 +40,7 @@ module stage_if (
 			NPC_reg[0] = squash_pc;
 			NPC_reg[1] = squash_pc; //+ 4;
 			NPC_reg[2] = squash_pc; //+ 8;
-		end else begin
+	    end else begin
 			NPC_reg[0] = PC_reg[0] + 4; // shoule be PC_reg[2] milestone 2
 			NPC_reg[1] = PC_reg[1] + 4; //+ 8; // shoule be PC_reg[2] milestone 2   /// ?
 			NPC_reg[2] = PC_reg[2] + 4; //+ 12; // shoule be PC_reg[2] milestone    /// ?
@@ -96,6 +96,7 @@ module stage_if (
         end else if (if_valid || take_branch || squash_flag) begin
             PC_reg <= NPC_reg;
         end
+		$display("if_valid = %h", if_valid);
     end
 
 

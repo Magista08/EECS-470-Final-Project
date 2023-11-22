@@ -144,6 +144,7 @@ module ROB (
     end
 
     assign RT_packet_out[0].dest_reg_idx = (~rob_table[head].value_flag) ? 5'b00000 : rob_table[head].reg_id;
+	assign RT_packet_out[0].tag = (~rob_table[head].value_flag) ? '{$clog2(`ROBLEN) {0}}: head;
     assign RT_packet_out[0].value = rob_table[head].value;
     assign RT_packet_out[0].take_branch = (~rob_table[head].value_flag) ? 0 : rob_table[head].take_branch;
     assign RT_packet_out[0].NPC = rob_table[head].NPC;
@@ -151,6 +152,8 @@ module ROB (
     assign RT_packet_out[0].valid = (~rob_table[head].value_flag) ? 0 : 1;
     assign RT_packet_out[1].dest_reg_idx = (~rob_table[head].value_flag || ~rob_table[head_plus1[$clog2(`ROBLEN)-1:0]].value_flag) ? 5'b00000 : 
 						rob_table[head_plus1[$clog2(`ROBLEN)-1:0]].reg_id;
+	assign RT_packet_out[1].tag = (~rob_table[head].value_flag || ~rob_table[head_plus1[$clog2(`ROBLEN)-1:0]].value_flag) ? '{$clog2(`ROBLEN) {0}} : 
+						head_plus1[$clog2(`ROBLEN)-1:0];
     assign RT_packet_out[1].value = rob_table[head_plus1[$clog2(`ROBLEN)-1:0]].value;
     assign RT_packet_out[1].take_branch = (~rob_table[head].value_flag || ~rob_table[head_plus1[$clog2(`ROBLEN)-1:0]].value_flag) ? 0 : 
 						rob_table[head_plus1[$clog2(`ROBLEN)-1:0]].take_branch;
@@ -159,6 +162,8 @@ module ROB (
     assign RT_packet_out[1].valid = (~rob_table[head].value_flag || ~rob_table[head_plus1[$clog2(`ROBLEN)-1:0]].value_flag) ? 0 : 1;
     assign RT_packet_out[2].dest_reg_idx = (~rob_table[head].value_flag || ~rob_table[head_plus1[$clog2(`ROBLEN)-1:0]].value_flag || 
 						~rob_table[head_plus2[$clog2(`ROBLEN)-1:0]].value_flag) ? 5'b00000 : rob_table[head_plus2[$clog2(`ROBLEN)-1:0]].reg_id;
+	assign RT_packet_out[2].tag = (~rob_table[head].value_flag || ~rob_table[head_plus1[$clog2(`ROBLEN)-1:0]].value_flag || 
+						~rob_table[head_plus2[$clog2(`ROBLEN)-1:0]].value_flag) ? '{$clog2(`ROBLEN) {0}} : head_plus2[$clog2(`ROBLEN)-1:0];
     assign RT_packet_out[2].value = rob_table[head_plus2[$clog2(`ROBLEN)-1:0]].value;
     assign RT_packet_out[2].take_branch = (~rob_table[head].value_flag || ~rob_table[head_plus1[$clog2(`ROBLEN)-1:0]].value_flag || 
 						~rob_table[head_plus2[$clog2(`ROBLEN)-1:0]].value_flag) ? 0 : rob_table[head_plus2[$clog2(`ROBLEN)-1:0]].take_branch;
@@ -170,18 +175,18 @@ module ROB (
 
     assign RS_packet_out[0].V1 = rob_table[MT_packet_in[0].T1].value;
     assign RS_packet_out[0].V2 = rob_table[MT_packet_in[0].T2].value;
-    assign RS_packet_out[0].valid1 = (MT_packet_in[0].valid1 && rob_table[MT_packet_in[0].T1].value_flag);
-    assign RS_packet_out[0].valid2 = (MT_packet_in[0].valid2 && rob_table[MT_packet_in[0].T2].value_flag);
+    assign RS_packet_out[0].valid1 = rob_table[MT_packet_in[0].T1].busy;
+    assign RS_packet_out[0].valid2 = rob_table[MT_packet_in[0].T2].busy;
     assign RS_packet_out[0].T = tail;
     assign RS_packet_out[1].V1 = rob_table[MT_packet_in[1].T1].value;
     assign RS_packet_out[1].V2 = rob_table[MT_packet_in[1].T2].value;
-    assign RS_packet_out[1].valid1 = (MT_packet_in[1].valid1 && rob_table[MT_packet_in[1].T1].value_flag);
-    assign RS_packet_out[1].valid2 = (MT_packet_in[1].valid2 && rob_table[MT_packet_in[1].T2].value_flag);
+    assign RS_packet_out[1].valid1 = rob_table[MT_packet_in[0].T1].busy;
+    assign RS_packet_out[1].valid2 = rob_table[MT_packet_in[0].T2].busy;
     assign RS_packet_out[1].T = tail_plus1[$clog2(`ROBLEN)-1:0];
     assign RS_packet_out[2].V1 = rob_table[MT_packet_in[2].T1].value;
     assign RS_packet_out[2].V2 = rob_table[MT_packet_in[2].T2].value;
-    assign RS_packet_out[2].valid1 = (MT_packet_in[2].valid1 && rob_table[MT_packet_in[2].T1].value_flag);
-    assign RS_packet_out[2].valid2 = (MT_packet_in[2].valid2 && rob_table[MT_packet_in[2].T2].value_flag);
+    assign RS_packet_out[2].valid1 = rob_table[MT_packet_in[0].T1].busy;
+    assign RS_packet_out[2].valid2 = rob_table[MT_packet_in[0].T2].busy;
     assign RS_packet_out[2].T = tail_plus2[$clog2(`ROBLEN)-1:0];
 
 
@@ -214,7 +219,7 @@ module ROB (
     always_comb begin
         count = 0;
         for (int k = 0; k < `ROBLEN; k++) begin
-                if (~rob_table_n[k].busy) begin
+                if (~rob_table[k].busy) begin
                     count = count + 1;
                 end
         end
@@ -222,7 +227,7 @@ module ROB (
     assign IF_packet_out.empty_num = (count>3) ? 3 : count;
 
     always_ff @(posedge clock) begin
-		$display("rob_T[0]:%h rob_R[0]:%h rob_valid[0]:%b des_reg_valid[0]:%b", MT_packet_out[0].T, MT_packet_out[0].R, MT_packet_out[0].valid, DP_packet_in[0].dest_reg_valid);
+		$display("rob_T[0]:%h rob_R[0]:%h rob_valid[0]:%b des_reg_valid[0]:%b RS_packet_out[0].valid1:%b RS_packet_out[0].valid2:%b", MT_packet_out[0].T, MT_packet_out[0].R, MT_packet_out[0].valid, DP_packet_in[0].dest_reg_valid, RS_packet_out[0].valid1, RS_packet_out[0].valid2);
 		$display("rob_T[1]:%h rob_R[1]:%h rob_valid[1]:%b des_reg_valid[1]:%b", MT_packet_out[1].T, MT_packet_out[1].R, MT_packet_out[1].valid, DP_packet_in[1].dest_reg_valid);
 		$display("rob_T[2]:%h rob_R[2]:%h rob_valid[2]:%b des_reg_valid[2]:%b", MT_packet_out[2].T, MT_packet_out[2].R, MT_packet_out[2].valid, DP_packet_in[2].dest_reg_valid);
 		$display("head:%h tail:%h, count:%d", head, tail, count);

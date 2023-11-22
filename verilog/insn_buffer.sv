@@ -9,7 +9,9 @@ module insn_buffer(
 	input [1:0] RS_blank_number, // blank number in reservation station
 
 	output logic insn_buffer_full,
-	output IF_ID_PACKET [2:0] ib_dp_packet_out
+	output IF_ID_PACKET [2:0] ib_dp_packet_out,
+	output logic [5-1:0] wptr,
+	output logic [5-1:0] rptr
 
 );
 
@@ -18,9 +20,10 @@ parameter PTR_DEPTH = $clog2(BUFFER_DEPTH) + 1;
 logic buffer_empty;
 logic [1:0] dp_packet_count;
 logic [1:0] m, n;
-logic [PTR_DEPTH-1:0] wptr, n_wptr, wptr1, wptr2;
-logic [PTR_DEPTH-1:0] rptr, n_rptr, rptr1, rptr2;
-logic [1:0] if_packet_size, ready_insn_size;
+logic [PTR_DEPTH-1:0] n_wptr, wptr1, wptr2;
+logic [PTR_DEPTH-1:0] n_rptr, rptr1, rptr2;
+logic [1:0] if_packet_size;
+logic [4:0] ready_insn_size;
 IF_ID_PACKET [BUFFER_DEPTH-1:0] slot;
 IF_ID_PACKET [BUFFER_DEPTH-1:0] n_slot;
 
@@ -29,13 +32,15 @@ assign insn_buffer_empty = (wptr == rptr);
 assign insn_buffer_full = (wptr == {~rptr[PTR_DEPTH-1], rptr[PTR_DEPTH-2:0]})   || 
 						  (wptr+1 == {~rptr[PTR_DEPTH-1], rptr[PTR_DEPTH-2:0]}) || 
 						  (wptr+2 == {~rptr[PTR_DEPTH-1], rptr[PTR_DEPTH-2:0]});
-// how many packet can i send to dispatch
+// find the size of the if_packt
 assign if_packet_size = n_wptr - wptr;
-assign ready_insn_size = wptr - rptr;
+// find how many insns in the buffer are ready
+assign ready_insn_size = (rptr > wptr)? 5'b11111-rptr+wptr+1 : wptr - rptr;
+// how many packet can i send to dispatch
 assign m = (ready_insn_size <= ROB_blank_number)? ready_insn_size : ROB_blank_number;
 assign n = (ready_insn_size <= RS_blank_number)? ready_insn_size : RS_blank_number;
 assign dp_packet_count = (m<=n) ? m : n;
-// find the size of the if_packt
+
 
 
 assign wptr1 = wptr + 1;
@@ -46,7 +51,6 @@ assign rptr2 = rptr + 2;
 // find the next write pointer
 always_comb begin
 	n_wptr = wptr;
-	
 	for(integer i=0; i<=2; i++) begin
 		if(if_packet_in[i].valid == 1) begin
 			n_wptr = wptr + i + 1;
@@ -54,7 +58,6 @@ always_comb begin
 		end
 	end
 end
-
 
 // Write the buffer
 always_comb begin
@@ -96,7 +99,7 @@ end
 
 
 always_comb begin
-	if(reset || insn_buffer_full || dp_packet_count == 2'b00) begin
+	if(reset || dp_packet_count == 2'b00) begin
 		ib_dp_packet_out[0].inst  =  `NOP;
 		ib_dp_packet_out[0].PC    =  0;
 		ib_dp_packet_out[0].NPC   =  0;
@@ -151,7 +154,7 @@ always_comb begin
 		ib_dp_packet_out[2].PC    =  0;
 		ib_dp_packet_out[2].NPC   =  0;
 		ib_dp_packet_out[2].valid =  0;
-	end
+	end 
 	
 end
 
@@ -160,18 +163,12 @@ always_ff @(posedge clock) begin
 	if(reset || squash_flag) begin
 		wptr <= 0;
 		rptr <= 0;
-		slot[0].inst  <=  `NOP;
-		slot[0].PC    <=  0;
-		slot[0].NPC   <=  0;
-		slot[0].valid <=  0;
-		slot[1].inst  <=  `NOP;
-		slot[1].PC    <=  0;
-		slot[1].NPC   <=  0;
-		slot[1].valid <=  0;
-		slot[2].inst  <=  `NOP;
-		slot[2].PC    <=  0;
-		slot[2].NPC   <=  0;
-		slot[2].valid <=  0;
+		for(integer j=0; j<=BUFFER_DEPTH; j++) begin
+			slot[j].inst <= `NOP;
+			slot[j].PC   <= 0;
+			slot[j].NPC  <= 0;
+			slot[j].valid<= 0;
+		end
 	end else if (enable) begin
 		if(!insn_buffer_full) begin 
 			wptr <=  n_wptr;
@@ -181,8 +178,8 @@ always_ff @(posedge clock) begin
 			rptr <=  n_rptr;
 		end
 	end
-$display("wptr:%b, rptr:%b", wptr, rptr);
-$display("ready_inst_in_buffer:%b", ready_insn_size);
+	$display("wptr = %d, rptr = %d", wptr, rptr);
+	$display("dp_packet_count = %d", dp_packet_count);
 end
 
 endmodule

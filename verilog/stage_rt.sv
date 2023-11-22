@@ -6,6 +6,7 @@ module stage_rt(
     
     // to stage_dp
     output  RT_DP_PACKET    [2:0]   rt_dp_packet_out, // retire_reg, value, valid
+    output  RT_MT_PACKET    [2:0]   rt_mt_packet_out, // retire_tag, valid
     // when interruptions occur, clear to the last insts having finished Retire
     output  logic [2:0]             valid,
     output  logic [2:0] [`XLEN-1:0] NPC,
@@ -39,6 +40,19 @@ module stage_rt(
     assign rt_dp_packet_out[2].value       = (rob_rt_packet_in[2].dest_reg_idx != `ZERO_REG)                                          
                                             ? rob_rt_packet_in[2].value : 0;
     assign rt_dp_packet_out[2].valid       = ((rob_rt_packet_in[2].dest_reg_idx != `ZERO_REG) && 
+                                           ~((rob_rt_packet_in[1].valid && rob_rt_packet_in[1].take_branch) || (rob_rt_packet_in[0].valid & rob_rt_packet_in[0].take_branch)))
+                                            ? rob_rt_packet_in[2].valid : 0;
+
+    assign rt_mt_packet_out[0].retire_tag  = rob_rt_packet_in[0].tag;
+    assign rt_mt_packet_out[1].retire_tag  = rob_rt_packet_in[1].tag;
+    assign rt_mt_packet_out[2].retire_tag  = rob_rt_packet_in[2].tag;
+
+    assign rt_mt_packet_out[0].valid       = (rob_rt_packet_in[0].dest_reg_idx != `ZERO_REG)
+                                            ? rob_rt_packet_in[0].valid : 0;
+    assign rt_mt_packet_out[1].valid       = ((rob_rt_packet_in[1].dest_reg_idx != `ZERO_REG) && 
+                                             ~(rob_rt_packet_in[0].valid && rob_rt_packet_in[0].take_branch)) 
+                                             ? rob_rt_packet_in[1].valid : 0;
+    assign rt_mt_packet_out[2].valid       = ((rob_rt_packet_in[2].dest_reg_idx != `ZERO_REG) && 
                                            ~((rob_rt_packet_in[1].valid && rob_rt_packet_in[1].take_branch) || (rob_rt_packet_in[0].valid & rob_rt_packet_in[0].take_branch)))
                                             ? rob_rt_packet_in[2].valid : 0;
 

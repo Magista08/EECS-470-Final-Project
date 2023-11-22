@@ -354,7 +354,7 @@ module RS (
     always_comb begin
         count = 0;
         for (int m = 0; m < `RSLEN; m++) begin
-                if (~out_busy[m]) begin
+                if (~rs_table[m].busy) begin
                     count = count + 1;
                 end
         end

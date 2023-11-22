@@ -25,7 +25,7 @@
 
 // sizes
 `define ROBLEN 32
-`define RSLEN 32
+`define RSLEN 16
 //`define PHYS_REG_SZ (32 + `ROB_SZ)
 
 // worry about these later
@@ -593,12 +593,13 @@ typedef struct packed{
 
 
 typedef struct packed {
-    logic [4:0] 	  			  dest_reg_idx;  // Retired register
-    logic [`XLEN-1:0] 			  value;// Value for retired register
-    logic                              take_branch;
-    logic [`XLEN-1:0]          NPC;
-    logic                              valid;
-    logic                              halt;
+    logic [4:0]                   dest_reg_idx; // Retired register
+    logic [`XLEN-1:0]             value;// Value for retired register
+    logic [$clog2(`ROBLEN)-1:0]   tag;//ROBID 
+    logic                         take_branch;
+    logic [`XLEN-1:0]             NPC;
+    logic                         valid;
+    logic                         halt;
 } ROB_RT_PACKET;
 
 typedef struct packed {
@@ -606,6 +607,11 @@ typedef struct packed {
     logic [`XLEN-1:0] 			  value; // Value for retired register
     logic                                                  valid;
 } RT_DP_PACKET;
+
+typedef struct packed {
+    logic [$clog2(`ROBLEN)-1:0]  retire_tag; // Retired tag
+    logic                        valid;
+} RT_MT_PACKET;
 
 `endif // __SYS_DEFS_SVH__
 

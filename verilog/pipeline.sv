@@ -79,6 +79,7 @@ module pipeline (
     CDB_RS_PACKET [2:0] cdb_rs_packet;
     CDB_ROB_PACKET [2:0] cdb_rob_packet;
     EX_PACKET [2:0] ex_cp_packet;
+    RT_MT_PACKET [2:0] rt_mt_packet;
 
     FU_EMPTY_PACKET fu_empty_packet;
 
@@ -213,6 +214,7 @@ module pipeline (
         .squash_flag(squash_flag),
         .rob_packet(rob_mt_packet),
         .dp_packet(dp_packet_out),
+        .rt_packet(rt_mt_packet),
         .cdb_packet(cdb_mt_packet),
         
         //output
@@ -418,6 +420,7 @@ module pipeline (
         .rob_rt_packet_in(rob_rt_packet), 
         // output
         .rt_dp_packet_out(rt_dp_packet),
+        .rt_mt_packet_out(rt_mt_packet),
         .valid(rt_valid),
         .NPC(rt_NPC),
         .squash_pc(squash_pc),
