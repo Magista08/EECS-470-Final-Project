@@ -99,7 +99,7 @@ end
 
 
 always_comb begin
-	if(reset || dp_packet_count == 2'b00) begin
+	if((reset || dp_packet_count == 2'b00) && enable) begin
 		ib_dp_packet_out[0].inst  =  `NOP;
 		ib_dp_packet_out[0].PC    =  0;
 		ib_dp_packet_out[0].NPC   =  0;
@@ -178,8 +178,8 @@ always_ff @(posedge clock) begin
 			rptr <=  n_rptr;
 		end
 	end
-	$display("wptr = %d, rptr = %d", wptr, rptr);
-	$display("dp_packet_count = %d", dp_packet_count);
+	// $display("wptr = %d, rptr = %d", wptr, rptr);
+	// $display("dp_packet_count = %d", dp_packet_count);
 end
 
 endmodule

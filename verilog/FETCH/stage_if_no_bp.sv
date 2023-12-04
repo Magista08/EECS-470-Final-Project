@@ -96,7 +96,7 @@ module stage_if (
         end else if (if_valid || take_branch || squash_flag) begin
             PC_reg <= NPC_reg;
         end
-		$display("if_valid = %h", if_valid);
+		// $display("if_valid = %h", if_valid);
     end
 
 

@@ -1576,76 +1576,16 @@ module MT(
     end
 
     always_ff @(posedge clock) begin
-        $display("mt_rs_T1[0]:%h mt_rs_T1_plus[0]:%h mt_rs_valid1[0]:%h mt_rs_T2[0]:%h mt_rs_T2_plus[0]:%h mt_rs_valid2[0]:%h dp_packet[0].rs1:%h dp_packet[0].rs2:%h dp_packet[0].rs1_value:%h dp_packet[0].rs2_value:%h MAP_TABLE[rs1][0]:%h N_VALID[rs1][0]:%h N_PLUS_BIT[rs1][0]:%h MAP_TABLE[rs2][0]:%h N_VALID[rs2][0]:%h N_PLUS_BIT[rs2][0]:%h", mt_rs_packet[0].T1, mt_rs_packet[0].T1_plus, mt_rs_packet[0].valid1, mt_rs_packet[0].T2, mt_rs_packet[0].T2_plus, mt_rs_packet[0].valid2, dp_packet[0].inst.r.rs1, dp_packet[0].inst.r.rs2, dp_packet[0].rs1_value, dp_packet[0].rs2_value, N_MAP_TABLE[3], N_VALID[3], N_PLUS_BIT[3], N_MAP_TABLE[3], N_VALID[3], N_PLUS_BIT[3]);
-        $display("mt_rs_T1[1]:%h mt_rs_T1_plus[1]:%h mt_rs_valid1[1]:%h mt_rs_T2[1]:%h mt_rs_T2_plus[1]:%h mt_rs_valid2[1]:%h dp_packet[1].rs1:%h dp_packet[1].rs2:%h dp_packet[1].rs1_value:%h dp_packet[1].rs2_value:%h MAP_TABLE[rs1][1]:%h N_VALID[rs1][1]:%h N_PLUS_BIT[rs1][1]:%h MAP_TABLE[rs2][1]:%h N_VALID[rs2][1]:%h N_PLUS_BIT[rs2][1]:%h", mt_rs_packet[1].T1, mt_rs_packet[1].T1_plus, mt_rs_packet[1].valid1, mt_rs_packet[1].T2, mt_rs_packet[1].T2_plus, mt_rs_packet[1].valid2, dp_packet[1].inst.r.rs1, dp_packet[1].inst.r.rs2, dp_packet[1].rs1_value, dp_packet[1].rs2_value, N_MAP_TABLE[3], N_VALID[3], N_PLUS_BIT[3], N_MAP_TABLE[3], N_VALID[3], N_PLUS_BIT[3]);
-        $display("mt_rs_T1[2]:%h mt_rs_T1_plus[2]:%h mt_rs_valid1[2]:%h mt_rs_T2[2]:%h mt_rs_T2_plus[2]:%h mt_rs_valid2[2]:%h dp_packet[2].rs1:%h dp_packet[2].rs2:%h dp_packet[2].rs1_value:%h dp_packet[2].rs2_value:%h MAP_TABLE[rs1][2]:%h N_VALID[rs1][2]:%h N_PLUS_BIT[rs1][2]:%h MAP_TABLE[rs2][2]:%h N_VALID[rs2][2]:%h N_PLUS_BIT[rs2][2]:%h", mt_rs_packet[2].T1, mt_rs_packet[2].T1_plus, mt_rs_packet[2].valid1, mt_rs_packet[2].T2, mt_rs_packet[2].T2_plus, mt_rs_packet[2].valid2, dp_packet[2].inst.r.rs1, dp_packet[2].inst.r.rs2, dp_packet[2].rs1_value, dp_packet[2].rs2_value, N_MAP_TABLE[3], N_VALID[3], N_PLUS_BIT[3], N_MAP_TABLE[3], N_VALID[3], N_PLUS_BIT[3]);
+        // $display("mt_rs_T1[0]:%h mt_rs_T1_plus[0]:%h mt_rs_valid1[0]:%h mt_rs_T2[0]:%h mt_rs_T2_plus[0]:%h mt_rs_valid2[0]:%h dp_packet[0].rs1:%h dp_packet[0].rs2:%h dp_packet[0].rs1_value:%h dp_packet[0].rs2_value:%h MAP_TABLE[rs1][0]:%h N_VALID[rs1][0]:%h N_PLUS_BIT[rs1][0]:%h MAP_TABLE[rs2][0]:%h N_VALID[rs2][0]:%h N_PLUS_BIT[rs2][0]:%h", mt_rs_packet[0].T1, mt_rs_packet[0].T1_plus, mt_rs_packet[0].valid1, mt_rs_packet[0].T2, mt_rs_packet[0].T2_plus, mt_rs_packet[0].valid2, dp_packet[0].inst.r.rs1, dp_packet[0].inst.r.rs2, dp_packet[0].rs1_value, dp_packet[0].rs2_value, N_MAP_TABLE[3], N_VALID[3], N_PLUS_BIT[3], N_MAP_TABLE[3], N_VALID[3], N_PLUS_BIT[3]);
+        // $display("mt_rs_T1[1]:%h mt_rs_T1_plus[1]:%h mt_rs_valid1[1]:%h mt_rs_T2[1]:%h mt_rs_T2_plus[1]:%h mt_rs_valid2[1]:%h dp_packet[1].rs1:%h dp_packet[1].rs2:%h dp_packet[1].rs1_value:%h dp_packet[1].rs2_value:%h MAP_TABLE[rs1][1]:%h N_VALID[rs1][1]:%h N_PLUS_BIT[rs1][1]:%h MAP_TABLE[rs2][1]:%h N_VALID[rs2][1]:%h N_PLUS_BIT[rs2][1]:%h", mt_rs_packet[1].T1, mt_rs_packet[1].T1_plus, mt_rs_packet[1].valid1, mt_rs_packet[1].T2, mt_rs_packet[1].T2_plus, mt_rs_packet[1].valid2, dp_packet[1].inst.r.rs1, dp_packet[1].inst.r.rs2, dp_packet[1].rs1_value, dp_packet[1].rs2_value, N_MAP_TABLE[3], N_VALID[3], N_PLUS_BIT[3], N_MAP_TABLE[3], N_VALID[3], N_PLUS_BIT[3]);
+        // $display("mt_rs_T1[2]:%h mt_rs_T1_plus[2]:%h mt_rs_valid1[2]:%h mt_rs_T2[2]:%h mt_rs_T2_plus[2]:%h mt_rs_valid2[2]:%h dp_packet[2].rs1:%h dp_packet[2].rs2:%h dp_packet[2].rs1_value:%h dp_packet[2].rs2_value:%h MAP_TABLE[rs1][2]:%h N_VALID[rs1][2]:%h N_PLUS_BIT[rs1][2]:%h MAP_TABLE[rs2][2]:%h N_VALID[rs2][2]:%h N_PLUS_BIT[rs2][2]:%h", mt_rs_packet[2].T1, mt_rs_packet[2].T1_plus, mt_rs_packet[2].valid1, mt_rs_packet[2].T2, mt_rs_packet[2].T2_plus, mt_rs_packet[2].valid2, dp_packet[2].inst.r.rs1, dp_packet[2].inst.r.rs2, dp_packet[2].rs1_value, dp_packet[2].rs2_value, N_MAP_TABLE[3], N_VALID[3], N_PLUS_BIT[3], N_MAP_TABLE[3], N_VALID[3], N_PLUS_BIT[3]);
         if (squash_flag || reset) begin
-           /* mt_rs_packet[0] <= '{
-            {$clog2(`ROBLEN){1'b0}},        // T1
-            {$clog2(`ROBLEN){1'b0}},        // T2
-            1'b0,                           // T1_plus
-            1'b0,                           // T2_plus
-            1'b0,                           // valid1
-            1'b0                            // valid2
-            };
-
-            mt_rs_packet[1] <= '{
-            {$clog2(`ROBLEN){1'b0}},        // T1
-            {$clog2(`ROBLEN){1'b0}},        // T2
-            1'b0,                           // T1_plus
-            1'b0,                           // T2_plus
-            1'b0,                           // valid1
-            1'b0                            // valid2
-            };
-
-            mt_rs_packet[2] <= '{
-            {$clog2(`ROBLEN){1'b0}},        // T1
-            {$clog2(`ROBLEN){1'b0}},        // T2
-            1'b0,                           // T1_plus
-            1'b0,                           // T2_plus
-            1'b0,                           // valid1
-            1'b0                            // valid2
-            };
-
-            mt_rob_packet[0] <= '{
-            {$clog2(`ROBLEN){1'b0}},        // T1
-            {$clog2(`ROBLEN){1'b0}},        // T2
-            1'b0,                           // T1_plus
-            1'b0,                           // T2_plus
-            1'b0,                           // valid1
-            1'b0                            // valid2
-            };
-
-            mt_rob_packet[1] <= '{
-            {$clog2(`ROBLEN){1'b0}},        // T1
-            {$clog2(`ROBLEN){1'b0}},        // T2
-            1'b0,                           // T1_plus
-            1'b0,                           // T2_plus
-            1'b0,                           // valid1
-            1'b0                            // valid2
-            };
-
-            mt_rob_packet[2] <= '{
-            {$clog2(`ROBLEN){1'b0}},        // T1
-            {$clog2(`ROBLEN){1'b0}},        // T2
-            1'b0,                           // T1_plus
-            1'b0,                           // T2_plus
-            1'b0,                           // valid1
-            1'b0                            // valid2
-            }; */
-
             for (int i=0; i <= 30; i++) begin
                 N_MAP_TABLE[i] <= {$clog2(`ROBLEN){1'b0}};
             end
             N_VALID [30:0] <= 0;
             N_PLUS_BIT [30:0] <= 0;
         end else begin                                      //？？？？？这里的enable信号我该怎么写
-            // mt_rs_packet[0] <= mt_rs_packet[0];
-            // mt_rs_packet[1] <= mt_rs_packet[1];
-            // mt_rs_packet[2] <= mt_rs_packet[2];
-            // mt_rob_packet[0] <= mt_rob_packet[0];
-            // mt_rob_packet[1] <= mt_rob_packet[1];
-            // mt_rob_packet[2] <= mt_rob_packet[2];
             N_MAP_TABLE [30:0] <= MAP_TABLE [30:0];
             N_VALID [30:0] <= VALID [30:0];
             N_PLUS_BIT [30:0] <= PLUS_BIT[30:0];

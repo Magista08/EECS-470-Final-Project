@@ -52,9 +52,7 @@ module testbench;
     logic [3:0]       mem2proc_response;
     logic [63:0]      mem2proc_data;
     logic [3:0]       mem2proc_tag;
-`ifndef CACHE_MODE
-    MEM_SIZE          proc2mem_size;
-`endif
+
 
     logic [2:0][3:0]       pipeline_completed_insts;
     EXCEPTION_CODE    pipeline_error_status;
@@ -62,6 +60,7 @@ module testbench;
     logic [2:0][`XLEN-1:0] pipeline_commit_wr_data;
     logic [2:0]            pipeline_commit_wr_en;
     logic [2:0][`XLEN-1:0] pipeline_commit_NPC;
+    DCACHE_SET [`DCACHE_SET_NUM-1:0] dcache_table_out;
 
     logic [2:0] [`XLEN-1:0] if_NPC_dbg;
     logic [2:0] [31:0]      if_inst_dbg;
@@ -73,6 +72,9 @@ module testbench;
     logic [2:0]            cdb_valid_dbg;
     logic [2:0] [`XLEN-1:0] rt_NPC_dbg;
     logic [2:0]            rt_valid_dbg;
+
+    logic [`XLEN-4:0]      curr_addr;
+    //EXCEPTION_CODE [2:0]   pipeline_error_status;
 
 
     // Instantiate the Pipeline
@@ -88,7 +90,6 @@ module testbench;
         .proc2mem_command (proc2mem_command),
         .proc2mem_addr    (proc2mem_addr),
         .proc2mem_data    (proc2mem_data),
-        .proc2mem_size    (proc2mem_size),
 
         .pipeline_completed_insts (pipeline_completed_insts),
         .pipeline_error_status    (pipeline_error_status),
@@ -96,6 +97,7 @@ module testbench;
         .pipeline_commit_wr_idx   (pipeline_commit_wr_idx),
         .pipeline_commit_wr_en    (pipeline_commit_wr_en),
         .pipeline_commit_NPC      (pipeline_commit_NPC),
+        .dcache_table_out         (dcache_table_out),
 
         .if_NPC_dbg       (if_NPC_dbg),
         .if_inst_dbg      (if_inst_dbg),
@@ -117,9 +119,9 @@ module testbench;
         .proc2mem_command (proc2mem_command),
         .proc2mem_addr    (proc2mem_addr),
         .proc2mem_data    (proc2mem_data),
-`ifndef CACHE_MODE
-        .proc2mem_size    (proc2mem_size),
-`endif
+// `ifndef CACHE_MODE
+//         .proc2mem_size    (proc2mem_size),
+// `endif
 
         // Outputs
         .mem2proc_response (mem2proc_response),
@@ -138,6 +140,16 @@ module testbench;
     task show_clk_count;
         real cpi;
         begin
+/*
+            if(pipeline_error_status[0] != NO_ERROR) begin
+                instr_count += 1;
+            end else if(pipeline_error_status[1] != NO_ERROR) begin
+                instr_count += 2;
+            end else begin
+                instr_count += 3;
+            end
+*/
+	    instr_count = instr_count - 1;
             cpi = (clock_count + 1.0) / instr_count;
             $display("@@  %0d cycles / %0d instrs = %f CPI\n@@",
                       clock_count+1, instr_count, cpi);
@@ -232,7 +244,7 @@ module testbench;
             instr_count <= 0;
         end else begin
             clock_count <= (clock_count + 1);
-            instr_count <= (instr_count + pipeline_completed_insts);
+            instr_count <= (instr_count + pipeline_completed_insts[0][0] + pipeline_completed_insts[1][0] + pipeline_completed_insts[2][0]);
         end
     end
 
@@ -293,23 +305,36 @@ module testbench;
 
             // deal with any halting conditions
             if(pipeline_error_status != NO_ERROR || debug_counter > 50000000) begin
+                for (int i = 0; i < 16; i++) begin
+                    if (dcache_table_out[i].line[0].valid) begin
+                        curr_addr = {dcache_table_out[i].line[0].tag, i[3:0]};
+                        $display("    address [%d] back to memory", {curr_addr, 3'b0});
+                        memory.unified_memory[curr_addr] = dcache_table_out[i].line[0].value;
+                    end
+                    if (dcache_table_out[i].line[1].valid) begin
+                        curr_addr = {dcache_table_out[i].line[1].tag, i[3:0]};
+                        $display("    address [%d] back to memory", {curr_addr, 3'b0});
+                        memory.unified_memory[curr_addr] = dcache_table_out[i].line[1].value;
+                    end
+                end
                 $display("@@@ Unified Memory contents hex on left, decimal on right: ");
                 show_mem_with_decimal(0,`MEM_64BIT_LINES - 1);
                 // 8Bytes per line, 16kB total
 
                 $display("@@  %t : System halted\n@@", $realtime);
-
-                case(pipeline_error_status)
-                    LOAD_ACCESS_FAULT:
-                        $display("@@@ System halted on memory error");
-                    HALTED_ON_WFI:
-                        $display("@@@ System halted on WFI instruction");
-                    ILLEGAL_INST:
-                        $display("@@@ System halted on illegal instruction");
-                    default:
-                        $display("@@@ System halted on unknown error code %x",
-                            pipeline_error_status);
-                endcase
+                if(pipeline_error_status != NO_ERROR) begin
+                    case(pipeline_error_status)
+                        LOAD_ACCESS_FAULT:
+                            $display("@@@ System halted on memory error");
+                        HALTED_ON_WFI:
+                            $display("@@@ System halted on WFI instruction");
+                        ILLEGAL_INST:
+                            $display("@@@ System halted on illegal instruction");
+                        default:
+                            $display("@@@ System halted on unknown error code %x",
+                                pipeline_error_status);
+                    endcase
+                end 
                 $display("@@@\n@@");
                 show_clk_count;
                 // print_close(); // close the pipe_print output file

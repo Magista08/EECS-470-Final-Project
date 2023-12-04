@@ -1,12 +1,19 @@
 `include "verilog/sys_defs.svh"
 `include "verilog/ISA.svh"
-`include "verilog/FU.sv"
 
 module EX (
     input                                                 clock,
     input                                                 reset,
     input                                                 clear,
     input RS_IS_PACKET [2:0]                              IS_packet,
+    // LSQ stuff
+    input DP_PACKET [2:0]                                 DP_packet,
+    input RT_LSQ_PACKET [2:0]                             RT_packet,
+    
+    input [3:0] Dmem2proc_response,
+    input [63:0] Dmem2proc_data,
+    input [3:0] Dmem2proc_tag,
+
 
     // to RS
     output FU_EMPTY_PACKET                                FU_empty_packet,
@@ -17,17 +24,27 @@ module EX (
     // to CDB and Fetch (maybe CDB to fetch?)
     output EX_PACKET [2:0]                                EX_packet, // tag, value, valid, NPC, halt
 
-    // debug
-    // output logic [`NUM_FU_ALU-1:0] [`XLEN-1:0]                   ALU_result,
-    // output logic [`NUM_FU_MULT-1:0] [`XLEN-1:0]                  MULT_result,
-    // output RS_IS_PACKET [`NUM_FU_ALU-1:0]                        ALU_input,
-    // output RS_IS_PACKET [`NUM_FU_MULT-1:0]                       MULT_input
-    // output logic [`NUM_FU_MULT-1:0]                              MULT_buffer_busy,
-    // output logic [`NUM_FU_MULT-1:0]                              MULT_busy,
-    output logic [`NUM_FU_ALU-1:0]                        ALU_buffer_busy,
-    output logic [`NUM_FU_ALU-1:0]                        ALU_busy
+    // // debug
+    // output logic [`NUM_FU_ALU-1:0] [`XLEN-1:0]            ALU_result,
+    // output logic [`NUM_FU_MULT-1:0] [`XLEN-1:0]           MULT_result,
+    // output RS_IS_PACKET [`NUM_FU_ALU-1:0]                 ALU_input,
+    // output RS_IS_PACKET [`NUM_FU_MULT-1:0]                MULT_input
+    // output logic [`NUM_FU_MULT-1:0]                       MULT_buffer_busy,
+    // output logic [`NUM_FU_MULT-1:0]                       MULT_busy,
+    // output logic [`NUM_FU_ALU-1:0]                        ALU_buffer_busy,
+    // output logic [`NUM_FU_ALU-1:0]                        ALU_busy
 
-    // LSQ stuff to be added
+    // LSQ stuff
+    output logic [2:0] [$clog2(`SQ_SIZE)-1:0]             SQ_tail, // to RS
+    output logic                                          SQ_full, // to instruction buffer
+
+    output logic icache_busy,
+    output logic rt_busy,
+    output logic [`XLEN-1:0] proc2Dmem_addr,
+    output logic [63:0] proc2Dmem_data,
+    output logic [1:0] proc2Dmem_command,
+    output DCACHE_SET [`DCACHE_SET_NUM-1:0] dcache_table,
+    output EX_BP_PACKET [2:0]                             EX_BP_packet
 
 );
 
@@ -40,7 +57,7 @@ module EX (
     logic [`NUM_FU_ALU-1:0] [`XLEN-1:0]                   ALU_result;
     logic [`NUM_FU_MULT-1:0] [`XLEN-1:0]                  MULT_result;
 
-    // logic [`NUM_FU_ALU-1:0]                               ALU_busy;
+    logic [`NUM_FU_ALU-1:0]                               ALU_busy;
     logic [`NUM_FU_MULT-1:0]                              MULT_busy;
 
     logic [`NUM_FU_ALU-1:0]                               ALU_result_ready;
@@ -53,6 +70,7 @@ module EX (
     logic [`NUM_FU_MULT-1:0]                              MULT_halt; // stop
 
     logic [2:0]                                           ALU_branch_taken; // emm
+    logic                                                 MEM_buffer_busy;
 
     logic [2:0]                                           CDB_halt;
     logic [2:0] [`XLEN-1:0]                               CDB_NPC;
@@ -61,8 +79,18 @@ module EX (
     logic [2:0]                                           CDB_valid;
     logic [2:0]                                           CDB_branch_taken; // emm
 
-    // logic [`NUM_FU_ALU-1:0]                               ALU_buffer_busy;
+    logic [`NUM_FU_ALU-1:0]                               ALU_buffer_busy;
     logic [`NUM_FU_MULT-1:0]                              MULT_buffer_busy;
+
+    // FU_load_store stuff
+    RS_IS_PACKET [`NUM_FU_MEM-1:0]                        FU_LOAD_STORE_in;
+    SQ_LINE [`NUM_FU_MEM-1:0]                             FU_LOAD_STORE_out;
+    logic [2:0] [$clog2(`SQ_SIZE)-1:0]                    sq_position;
+    // SQ stuff
+    EX_PACKET                                             SQ_COMP_packet;
+    LSQ_DCACHE_PACKET                                     SQ_DC_packet;
+    DCACHE_LSQ_PACKET [2:0]                               DC_SQ_packet;
+
 
     // generate FU's
     genvar a;
@@ -80,7 +108,8 @@ module EX (
                 .result(ALU_result[a]), 
                 .busy(ALU_busy[a]),
                 .result_ready(ALU_result_ready[a]),
-                .branch_taken(ALU_branch_taken[a])
+                .branch_taken(ALU_branch_taken[a]),
+                .EX_BP_packet_out(EX_BP_packet[a])
             );
         end
     endgenerate
@@ -103,6 +132,22 @@ module EX (
             );
         end
     endgenerate
+
+    genvar c;
+    generate
+        for (c=0; c<`NUM_FU_MEM; c=c+1) begin
+            FU_LOAD_STORE FU_LOAD_STORE_0 (
+                .clock(clock), 
+                .reset(reset), 
+                .clear(clear),
+                .fu_input(FU_LOAD_STORE_in[c]),
+
+                .FU_LOAD_STORE_out(FU_LOAD_STORE_out[c]),
+                .sq_position(sq_position[c])
+            );
+        end
+    endgenerate
+
 
     // give each FU input
     always_comb begin
@@ -127,7 +172,8 @@ module EX (
                 1'b0,                    // illegal
                 1'b0,                    // csr_op
                 1'b0,                    // valid
-                FUNC_ALU                 // FUNC_UNIT
+                FUNC_ALU,                 // FUNC_UNIT
+		{$clog2(`SQ_SIZE){1'b0}}
             };
         end
         for (int kk=0; kk<`NUM_FU_MULT; kk=kk+1) begin
@@ -150,53 +196,69 @@ module EX (
                 1'b0,                    // illegal
                 1'b0,                    // csr_op
                 1'b0,                    // valid
-                FUNC_ALU                 // FUNC_UNIT
+                FUNC_ALU,                 // FUNC_UNIT
+		{$clog2(`SQ_SIZE){1'b0}}
             };
         end
 
         // They will never be busy so...
-        // for (int i=0; i<3; i=i+1) begin
-        //     // if (IS_packet[i].can_execute) begin
-        //     if (IS_packet[i].illegal == 0) begin //???????? change to nop?
-		//         if (IS_packet[i].func_unit == FUNC_ALU) begin
-        //             for (int j=0; j<`NUM_FU_ALU; j=j+1) begin
-        //                 if (~ALU_busy[j]) begin
-        //                     ALU_input[j] = IS_packet[i];
-        //                     break;
-        //                 end
-        //             end
-        //         end else if (IS_packet[i].func_unit == FUNC_MUL) begin
-        //             for (int k=0; k<`NUM_FU_MULT; k=k+1) begin
-        //                 if (~MULT_busy[k]) begin
-        //                     MULT_input[k] = IS_packet[i];
-        //                     break;
-        //                 end
-        //             end
-        //         end
-        //     end
-        // end
-
         // So I assign each way an FU (How can I add more FU's ?)
         for (int i=0; i<3; i=i+1) begin
-            // if (IS_packet[i].illegal == 0) begin //???????? change to nop?
-            if (IS_packet[i].inst != `NOP) begin
+            // if (IS_packet[i].illegal == 0) begin // change to nop?
+            if (IS_packet[i].inst != `NOP) begin // Maybe they don't want me to use NOP
 		        if (IS_packet[i].func_unit == FUNC_ALU) begin
                     ALU_input[i] = IS_packet[i];                    
                 end else if (IS_packet[i].func_unit == FUNC_MUL) begin
                     MULT_input[i] = IS_packet[i];
+                end else if (IS_packet[i].func_unit == FUNC_MEM) begin
+                    FU_LOAD_STORE_in[i] = IS_packet[i];
                 end
             end
         end
 
     end
 
+    // put stuff into SQ
+    LSQ lsq_0 (
+        .clock(clock),
+        .reset(reset),
+        .clear(clear),
+        .DP_packet(DP_packet),
+        .LOAD_STORE_input(FU_LOAD_STORE_out),
+        .position(sq_position),
+        .RT_packet(RT_packet),
+        .DC_SQ_packet(DC_SQ_packet),
+
+        .SQ_tail(SQ_tail),
+        .SQ_full(SQ_full),
+        .SQ_COMP_packet(SQ_COMP_packet),
+        .SQ_DC_packet(SQ_DC_packet)
+    );
+
+    // DCache to be added
+    DCACHE DCache_0(
+        .clock(clock),
+        .reset(reset),
+        .squash_flag(clear),
+        .lsq_packet_in(SQ_DC_packet),
+        .Dmem2proc_response(Dmem2proc_response),
+        .Dmem2proc_data(Dmem2proc_data),
+        .Dmem2proc_tag(Dmem2proc_tag),
+
+        .lsq_packet_out(DC_SQ_packet),
+        .icache_busy(icache_busy),
+        .rt_busy(rt_busy),
+        .proc2Dmem_addr(proc2Dmem_addr),
+        .proc2Dmem_data(proc2Dmem_data),
+        .proc2Dmem_command(proc2Dmem_command),
+        .dcache_table(dcache_table)
+    );
+
+
     // put stuff into FU_empty_packet
-    // assign FU_empty_packet.ALU_empty = ~(ALU_busy | ALU_buffer_busy);
-    // assign FU_empty_packet.MULT_empty = ~(MULT_busy | MULT_buffer_busy);
-    // assign FU_empty_packet.ALU_empty = ~(ALU_busy);
-    // assign FU_empty_packet.MULT_empty = ~(MULT_busy);
     assign FU_empty_packet.ALU_empty = ~(ALU_buffer_busy);
     assign FU_empty_packet.MULT_empty = ~(MULT_buffer_busy);
+    assign FU_empty_packet.MEM_empty = ~(MEM_buffer_busy);
 
     // put stuff into EX_packet
     complete_buffer complete_buffer_0 (
@@ -214,15 +276,17 @@ module EX (
         .MULT_NPC(MULT_NPC),
         .ALU_halt(ALU_halt),
         .MULT_halt(MULT_halt),
+        .SQ_COMP_packet(SQ_COMP_packet), // LSQ
 
         .CDB_halt(CDB_halt),
         .CDB_NPC(CDB_NPC),
         .CDB_tag(CDB_tag),
         .CDB_value(CDB_value),
         .CDB_valid(CDB_valid),
+        .CDB_branch_taken(CDB_branch_taken),
         .ALU_buffer_busy(ALU_buffer_busy),
         .MULT_buffer_busy(MULT_buffer_busy),
-        .CDB_branch_taken(CDB_branch_taken)
+        .MEM_buffer_busy(MEM_buffer_busy) // LSQ
     );
 
     assign EX_packet[0].T = CDB_tag[0];
@@ -252,7 +316,7 @@ module EX (
 endmodule
 
 
-// No need to consider order here, just choose 3 (remember to add NPC)
+// No need to consider order here, just choose 3
 module complete_buffer (
     input                                                 clock,
     input                                                 reset,
@@ -268,6 +332,9 @@ module complete_buffer (
     input [`NUM_FU_ALU-1:0]                               ALU_halt,
     input [`NUM_FU_MULT-1:0]                              MULT_halt,
     input [`NUM_FU_ALU-1:0]                               ALU_branch_taken,
+    // LSQ stuff
+    input EX_PACKET                                       SQ_COMP_packet,
+    
 
     output logic [2:0] [$clog2(`ROBLEN)-1:0]              CDB_tag,
     output logic [2:0] [`XLEN-1:0]                        CDB_value,
@@ -276,11 +343,13 @@ module complete_buffer (
     output logic [2:0] [`XLEN-1:0]                        CDB_NPC,
     output logic [2:0]                                    CDB_halt,
 
+    output logic                                           MEM_buffer_busy,
     output logic [`NUM_FU_ALU-1:0]                        ALU_buffer_busy,
     output logic [`NUM_FU_MULT-1:0]                       MULT_buffer_busy
 );
 
     EX_PACKET [`CompBuff_SIZE-1:0]                        buffer, next_buffer;
+    logic     [`CompBuff_SIZE-1:0]                        buffer_halt;
 
     logic [2:0]                                           next_CDB_halt;   
     logic [2:0] [`XLEN-1:0]                               next_CDB_NPC;
@@ -288,6 +357,17 @@ module complete_buffer (
     logic [2:0] [`XLEN-1:0]                               next_CDB_value;
     logic [2:0]                                           next_CDB_valid;
     logic [2:0]                                           next_CDB_branch_taken;
+    
+    genvar cp_i;
+    generate
+        for (cp_i=0; cp_i<`CompBuff_SIZE; cp_i=cp_i+1) begin
+            assign buffer_halt[cp_i] = buffer[cp_i].valid;
+        end
+    endgenerate
+
+    always_ff @(posedge clock) begin
+        $display("buffer_halt: %b", buffer_halt);
+    end
 
     // assign function unit outputs to the buffer
     always_comb begin
@@ -320,7 +400,7 @@ module complete_buffer (
                     next_buffer[i].value = MULT_result[i];
                     next_buffer[i].valid = 1;
                     next_buffer[i].branch_taken = 0;
-                    // break;
+			//$display("--------MULT------------");
                 end
             end
             for (int j=0; j<`NUM_FU_ALU; j=j+1) begin
@@ -331,8 +411,28 @@ module complete_buffer (
                     next_buffer[j+`NUM_FU_MULT].value = ALU_result[j];
                     next_buffer[j+`NUM_FU_MULT].valid = 1;
                     next_buffer[j+`NUM_FU_MULT].branch_taken = ALU_branch_taken[j];
-                    // break;
+			//$display("--------ALU------------");
                 end
+            end
+            // LSQ stuff (only one here)
+            // for (int k=0; k<`NUM_FU_MEM; k=k+1) begin
+            //     if (ALU_result_ready[k] && ~next_buffer[k+`NUM_FU_MULT+`NUM_FU_ALU].valid) begin
+            //         next_buffer[k+`NUM_FU_MULT+`NUM_FU_ALU].halt = ;
+            //         next_buffer[k+`NUM_FU_MULT+`NUM_FU_ALU].NPC = ;
+            //         next_buffer[k+`NUM_FU_MULT+`NUM_FU_ALU].T = ;
+            //         next_buffer[k+`NUM_FU_MULT+`NUM_FU_ALU].value = ;
+            //         next_buffer[k+`NUM_FU_MULT+`NUM_FU_ALU].valid = ;
+            //         next_buffer[k+`NUM_FU_MULT+`NUM_FU_ALU].branch_taken = ;
+            //     end
+            // end
+            if (SQ_COMP_packet.valid && ~next_buffer[`NUM_FU_MULT+`NUM_FU_ALU].valid) begin
+                next_buffer[`NUM_FU_MULT+`NUM_FU_ALU].halt = SQ_COMP_packet.halt;
+                next_buffer[`NUM_FU_MULT+`NUM_FU_ALU].NPC = SQ_COMP_packet.NPC;
+                next_buffer[`NUM_FU_MULT+`NUM_FU_ALU].T = SQ_COMP_packet.T;
+                next_buffer[`NUM_FU_MULT+`NUM_FU_ALU].value = SQ_COMP_packet.value;
+                next_buffer[`NUM_FU_MULT+`NUM_FU_ALU].valid = 1;
+                next_buffer[`NUM_FU_MULT+`NUM_FU_ALU].branch_taken = 0;
+		$display("--------MEM------------");
             end
 
             // give information to next CDB and set buffer not valid
@@ -347,6 +447,7 @@ module complete_buffer (
                         next_CDB_branch_taken[i] = next_buffer[j].branch_taken;
 
                         next_buffer[j].valid = 0;
+			//$display("---------------------------------------------------caonnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnmmmmmmm---------------------------------------------");
                         break;
                     end
                 end
@@ -359,25 +460,14 @@ module complete_buffer (
             for (int j=0; j<`NUM_FU_ALU; j=j+1) begin
                 ALU_buffer_busy[j] = next_buffer[j+`NUM_FU_MULT].valid;
             end
-
+            MEM_buffer_busy = next_buffer[`NUM_FU_MULT+`NUM_FU_ALU].valid; // only one LSQ output here
         end
     end
 
-    // // give busy information
-    // always_comb begin
-    //     ALU_buffer_busy = 0;
-    //     MULT_buffer_busy = 0;
-
-    //     for (int i=0; i<`NUM_FU_MULT; i=i+1) begin
-    //         MULT_buffer_busy[i] = buffer[i].valid;// next or current
-    //     end
-    //     for (int j=0; j<`NUM_FU_ALU; j=j+1) begin
-    //         ALU_buffer_busy[j] = buffer[j+`NUM_FU_MULT].valid;
-    //     end
-    // end
-
     // update buffer and CDB
     always_ff @(posedge clock) begin 
+        //$display("next_buffer[0].valid = %h, next_buffer[1].valid = %h, next_buffer[2].valid = %h, next_buffer[3].valid = %h, next_buffer[4].valid = %h, next_buffer[5].valid = %h, next_buffer[6].valid = %h",next_buffer[0].value, next_buffer[1].value, next_buffer[2].value, next_buffer[3].value, next_buffer[4].value, next_buffer[5].value, next_buffer[6].value);
+	//$display("------next_CDB_valid:%b---------", next_CDB_valid);
         if(reset) begin
             buffer <= 0;
             CDB_halt <= 0;
@@ -388,34 +478,14 @@ module complete_buffer (
             CDB_branch_taken <= 0;
         end
         else begin
-            // buffer <= next_buffer;
-            // CDB_tag <= 0;   // clear CDB at every cycle
-            // CDB_value <= 0;
-            // CDB_valid <= 0;
-            // CDB_branch_taken <= 0;
-
-            // for (int i=0; i<3; i=i+1) begin
-            //     for (int j=0; j<`CompBuff_SIZE; j=j+1) begin
-            //         if (buffer[j].valid) begin
-            //             CDB_tag[i] <= buffer[j].T;
-            //             CDB_value[i] <= buffer[j].value;
-            //             CDB_valid[i] <= buffer[j].valid; // 1
-            //             CDB_branch_taken[i] <= buffer[j].branch_taken;
-                        
-            //             buffer[j].valid <= 0;
-            //             break;
-            //         end
-            //     end
-            // end
-
             buffer <= next_buffer;
             CDB_halt <= next_CDB_halt;
             CDB_NPC <= next_CDB_NPC;
             CDB_tag <= next_CDB_tag;
             CDB_value <= next_CDB_value;
             CDB_valid <= next_CDB_valid;
+	// $display("------next_CDB_valid:%b---------", next_CDB_valid);
             CDB_branch_taken <= next_CDB_branch_taken;
-
         end
     end 
 

@@ -26,7 +26,32 @@
 // sizes
 `define ROBLEN 32
 `define RSLEN 16
+`define SQ_SIZE 8
 //`define PHYS_REG_SZ (32 + `ROB_SZ)
+
+// Internal macros, no other file should need these
+`define CACHE_LINES 32
+`define CACHE_LINE_BITS $clog2(`CACHE_LINES)
+
+//BTB
+`define BTBSIZE 256
+`define TAGSIZE 10
+`define VALSIZE 12
+
+// PHT
+`define PHTLEN 256
+`define PHTWIDTH 8
+
+// BHT
+`define BHTLEN 256
+`define BHTWIDTH $clog2(`PHTWIDTH)
+
+//RAS
+`define RAS_SIZE 8
+
+
+//To avoid the clock problem, we define a small delay which can not be synthesized
+`define SD #1
 
 // worry about these later
 `define BRANCH_PRED_SZ xx
@@ -37,6 +62,7 @@
 `define NUM_FU_MULT 3
 `define NUM_FU_LOAD xx
 `define NUM_FU_STORE xx
+`define NUM_FU_MEM 3
 
 // number of mult stages (2, 4, or 8)
 `define MULT_STAGES 4
@@ -70,13 +96,13 @@
 // a double word. The original processor won't work with this defined. Your new
 // processor will have to account for this effect on mem.
 // Notably, you can no longer write data without first reading.
-// `define CACHE_MODE
+`define CACHE_MODE
 
 // you are not allowed to change this definition for your final processor
 // the project 3 processor has a massive boost in performance just from having no mem latency
 // see if you can beat it's CPI in project 4 even with a 100ns latency!
-`define MEM_LATENCY_IN_CYCLES  0
-// `define MEM_LATENCY_IN_CYCLES (100.0/`CLOCK_PERIOD+0.49999)
+// `define MEM_LATENCY_IN_CYCLES  0
+`define MEM_LATENCY_IN_CYCLES (100.0/`CLOCK_PERIOD+0.49999)
 // the 0.49999 is to force ceiling(100/period). The default behavior for
 // float to integer conversion is rounding to nearest
 
@@ -85,6 +111,7 @@
 //modify is_buffer
 `define MEM_SIZE_IN_BYTES (64*1024)
 `define MEM_64BIT_LINES   (`MEM_SIZE_IN_BYTES/8)
+`define DCACHE_SET_NUM   16
 
 typedef union packed {
     logic [7:0][7:0]  byte_level;
@@ -272,6 +299,13 @@ typedef enum logic [4:0] {
     ALU_REMU    = 5'h11  // unused
 } ALU_FUNC;
 
+typedef enum logic [1:0]{
+	N_STRONG  = 2'h0,    // assume branch taken strong
+	N_WEAK    = 2'h1,    // assume branch taken weak
+	T_WEAK     = 2'h2,
+	T_STRONG   = 2'h3    // assume branch no taken
+}PHT_STATE;
+
 ////////////////////////////////
 // ---- Datapath Packets ---- //
 ////////////////////////////////
@@ -282,6 +316,29 @@ typedef enum logic [4:0] {
  *
  * Define new ones in project 4 at your own discretion
  */
+ /**
+  * ICache_IF Packet:
+ * Data exchanged from the ICache to the IF stage
+ */
+
+typedef struct packed{
+	logic [31:0]   inst;
+	logic          valid;
+
+}ICACHE_IF_PACKET;
+
+typedef struct packed{
+	logic [63:0] data;
+	logic            valid;
+
+}ICACHE_PACKET;
+
+ typedef struct packed {
+    logic [63:0]                  data;
+    // (13 bits) since only need 16 bits to access all memory and 3 are the offset
+    logic [12-`CACHE_LINE_BITS:0] tags;
+    logic                         valid;
+} ICACHE_ENTRY;
 
 /**
  * IF_ID Packet:
@@ -411,6 +468,7 @@ typedef struct packed {
 
     logic       valid;
     FUNC_UNIT   func_unit;
+    logic [$clog2(`SQ_SIZE)-1:0] sq_position;
 } RS_LINE;
 
 typedef struct packed {
@@ -435,6 +493,7 @@ typedef struct packed {
     logic             take_branch;//cdb
     logic [`XLEN-1:0]             NPC;
     logic                              halt;
+    logic                     rd_wr_mem;
 } ROB_LINE;
 
 
@@ -558,9 +617,10 @@ typedef struct packed {
 
     logic       valid;
     FUNC_UNIT   func_unit;
+    logic [$clog2(`SQ_SIZE)-1:0] sq_position;
 } RS_IS_PACKET;
 
-`define CompBuff_SIZE (`NUM_FU_ALU + `NUM_FU_MULT)
+`define CompBuff_SIZE (`NUM_FU_ALU + `NUM_FU_MULT + 1)
 
 typedef struct packed {
     logic [$clog2(`ROBLEN)-1:0]    T;
@@ -571,11 +631,111 @@ typedef struct packed {
     logic                       halt;
 } EX_PACKET;
 
+typedef struct packed{
+    logic branch_en;  // Check if this branch needs to branch
+    logic cond_branch_en; // Check if this is a conditional branch (Get rid of JAL and JALR)
+    logic cond_branch_taken; // Check if this branch is taken
+    logic [`XLEN-1:0] PC;         // Supposed Instruction PC
+    logic [`XLEN-1:0] target_PC;  // Target PC
+} EX_BP_PACKET;
+
+
+
+
 typedef struct packed {
     logic [`NUM_FU_ALU-1:0]        ALU_empty;
-    logic [`NUM_FU_MULT-1:0]         MULT_empty;
+    logic [`NUM_FU_MULT-1:0]       MULT_empty;
+    logic                          MEM_empty;
 } FU_EMPTY_PACKET;
 
+
+// SQ
+// typedef struct packed {
+//     logic                          valid;
+//     logic                          load_1_store_0;
+//     logic [2:0]                    mem_size;
+// 	logic [`XLEN-1:2]              word_addr;
+// 	logic [1:0]                    res_addr;
+// 	logic [`XLEN-1:0]              value;
+// 	logic [$clog2(`ROBLEN)-1:0]    T;
+// } FU_SQ_PACKET;
+
+
+typedef struct packed {
+    logic                          valid;
+    logic                          load_1_store_0;
+    logic [2:0]                    mem_size;
+    logic [`XLEN-1:2]              word_addr;
+	logic [1:0]                    res_addr;
+	logic [`XLEN-1:0]              value;
+	logic [$clog2(`ROBLEN)-1:0]    T;
+    logic                          retire_valid;
+    logic                          pre_store_done;
+    logic                          sent_to_CompBuff;
+    logic                          addr_cannot_to_DCache;
+
+    // just pass through
+    logic [`XLEN-1:0]              NPC;
+    logic                          halt;
+} SQ_LINE;
+
+
+// typedef struct packed {
+//     logic                          branch_taken;
+//     logic [`XLEN-1:0]              bp_pc;
+// } BRANCH_PACKET;
+
+typedef struct packed {
+    logic valid;
+    logic [`XLEN-1:0] address;
+    logic [`XLEN-1:0] value;//ST
+    logic st_or_ld;//ST=0, LD=1
+    MEM_SIZE          mem_size;
+    logic [`XLEN-1:0] NPC;
+} LSQ_DCACHE_PACKET;
+
+typedef struct packed {
+    logic busy;//cannot send packet to dcache
+    //logic completed;//1: the value load for proc is ready/the value store to mem is completed
+    logic valid;//load value is valid
+    logic [`XLEN-1:0] value;//LD
+    logic [`XLEN-1:0] address;
+    logic [`XLEN-1:0] NPC;
+    logic st_or_ld;
+} DCACHE_LSQ_PACKET;
+
+typedef struct packed {
+    logic [63:0] value;
+    logic [24:0] tag;
+    logic valid;
+} DCACHE_LINE;
+
+typedef struct packed {
+    logic last_ptr;
+    DCACHE_LINE [1:0] line;
+} DCACHE_SET;
+
+typedef struct packed {
+    //logic valid;
+    //logic ready;
+    logic [2:0] bo;
+    logic [3:0] idx;
+    logic [24:0] tag;
+    logic st_or_ld;//ST=0, LD=1
+    logic [63:0] value;
+    MEM_SIZE          mem_size;  
+    //logic [3:0] response;
+    logic ptr;
+    logic [`XLEN-1:0] NPC;
+    logic [`XLEN-1:0] in_value;
+} MSHR_LINE;
+
+typedef enum logic [1:0] {
+	INVALID    = 2'h0,   
+	WAITING    = 2'h1,    
+	COMPLETED   = 2'h2,    
+	READY    = 2'h3     
+}MSHR_STATE;
 
 typedef struct packed {
     logic [1:0]				empty_num;//to DP
@@ -613,5 +773,11 @@ typedef struct packed {
     logic                        valid;
 } RT_MT_PACKET;
 
+typedef struct packed {
+    logic [$clog2(`ROBLEN)-1:0]  retire_tag; // Retired tag
+    logic                        valid;
+} RT_LSQ_PACKET;
 `endif // __SYS_DEFS_SVH__
+
+
 

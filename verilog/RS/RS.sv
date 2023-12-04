@@ -36,11 +36,12 @@ endmodule
 module RS (
     input             		  clock, reset, enable,
     input  			          squash_flag,   // branch predictor signal
-    input DP_PACKET [2:0]  dp_packet_in,
+    input DP_PACKET [2:0]     dp_packet_in,
     input MT_RS_PACKET [2:0]  mt_packet_in,
     input ROB_RS_PACKET [2:0] rob_packet_in,
     input CDB_RS_PACKET [2:0] cdb_packet_in,
     input FU_EMPTY_PACKET	  fu_empty_packet,
+    input [`N-1:0] [$clog2(`SQ_SIZE)-1:0] sq_tail_in,
    
     output RS_IS_PACKET [2:0] is_packet_out,
     output RS_IF_PACKET       dp_packet_out//to DP
@@ -68,7 +69,7 @@ module RS (
     logic [$clog2(`RSLEN):0]                 count;
     logic [`RSLEN-1:0]                       out_busy;
 
-    logic [2:0] [`RSLEN-1:0]    rs_is_posi_line;
+    logic [`RSLEN-1:0]    rs_is_posi_line;
 
     logic [1:0]                 alu_empty_count;
     //logic [1:0]                 mult_empty_count;
@@ -107,7 +108,7 @@ module RS (
                 .reset(reset),
                 .enable(enable && read_inst_sig[i]),
                 .clear(clear_signal[i]),
-                .line_id(i),
+                .line_id(i[$clog2(`RSLEN)-1:0]),
                 .dp_packet(dp_packet_in[sel_buffer[i]%3]), 
                 .mt_packet(mt_packet_in[sel_buffer[i]%3]),
                 .rob_packet(rob_packet_in[sel_buffer[i]%3]),
@@ -117,6 +118,7 @@ module RS (
                 .other_dest_reg1(other_dest_reg1[i]),
                 .other_dest_reg2(other_dest_reg2[i]),
                 .my_position(sel_buffer[i]),
+                .sq_position(sq_tail_in[sel_buffer[i]%3]),
                 
                 //output
                 .not_ready(not_ready[i]),
@@ -128,23 +130,23 @@ module RS (
 
     always_comb begin
         alu_empty_count = 0;
-	alu_num = 0;
-	//mult_empty_count = 0;
-	//mult_num = 0;
-        for (int n = 0; n < 3; n++) begin
-            if (fu_empty_packet.ALU_empty[n]) begin
-                alu_empty_count = alu_empty_count + 1;
+        alu_num = 0;
+        //mult_empty_count = 0;
+        //mult_num = 0;
+            for (int n = 0; n < 3; n++) begin
+                if (fu_empty_packet.ALU_empty[n]) begin
+                    alu_empty_count = alu_empty_count + 1;
+                end
+            // if (fu_empty_packet.MULT_empty[n]) begin
+            //         mult_empty_count = mult_empty_count + 1;
+            // end
             end
-	    // if (fu_empty_packet.MULT_empty[n]) begin
-        //         mult_empty_count = mult_empty_count + 1;
-        //     end
+        for (int l = 0; l < `RSLEN; l++) begin
+            alu_num = (~not_ready[l] && (rs_table[l].func_unit == FUNC_ALU)) ? alu_num + 1 : alu_num;
+            //mult_num = (~not_ready[l] && (rs_table[l].func_unit == FUNC_MUL)) ? mult_num + 1 : mult_num;
+            masked_not_ready[l] = (not_ready[l]) ? 1 : 
+            (((alu_num > alu_empty_count) && (rs_table[l].func_unit == FUNC_ALU))) ? 1 : 0;
         end
-	for (int l = 0; l < `RSLEN; l++) begin
-	    alu_num = (~not_ready[l] && (rs_table[l].func_unit == FUNC_ALU)) ? alu_num + 1 : alu_num;
-	    //mult_num = (~not_ready[l] && (rs_table[l].func_unit == FUNC_MUL)) ? mult_num + 1 : mult_num;
-	    masked_not_ready[l] = (not_ready[l]) ? 1 : 
-		(((alu_num > alu_empty_count) && (rs_table[l].func_unit == FUNC_ALU))) ? 1 : 0;
-	end
     end
 
 
@@ -168,14 +170,17 @@ module RS (
         end
     end
     */
-    assign clear_signal = (reset || squash_flag) ? {`ROBLEN{1'b0}} : rs_is_posi_line;
-
+    assign clear_signal = (reset || squash_flag) ? {`RSLEN{1'b1}} : rs_is_posi_line;
+    logic display_valid;
+    INST display_inst;
     always_comb begin
         // $display("clear_signal = %b", clear_signal);
         // $display("not_ready = %b", not_ready);
         display_T1 = 0;
         display_T2 = 0;
+        display_inst = 0;
         display_line_id = 0;
+        display_valid   = 0;
         is_packet_out[0] ={
             {$clog2(`ROBLEN){1'b0}}, // T
             `NOP,                    // inst
@@ -199,7 +204,8 @@ module RS (
             1'b1,                    // illegal
             1'b0,                    // csr_op
             1'b0,                     // valid
-		    FUNC_NOP			//func_unit
+		    FUNC_NOP,			//func_unit
+	    {$clog2(`SQ_SIZE){1'b0}}
         };
         for (int i=0; i<`RSLEN; i++) begin
             // Packet out
@@ -226,9 +232,12 @@ module RS (
                 is_packet_out[0].csr_op        = rs_table[i].csr_op;
                 is_packet_out[0].valid         = rs_table[i].valid;
 		        is_packet_out[0].func_unit     = rs_table[i].func_unit;
+		        is_packet_out[0].sq_position     = rs_table[i].sq_position;
                 display_T1 = rs_table[i].T1;
                 display_T2 = rs_table[i].T2;
+                display_inst = rs_table[i].inst;
                 display_line_id = i;
+                display_valid = 1;
             end 
         end
     end
@@ -257,7 +266,8 @@ module RS (
             1'b1,                    // illegal
             1'b0,                    // csr_op
             1'b0,                     // valid
-		    FUNC_NOP                 //func_unit
+		    FUNC_NOP,                 //func_unit
+	    {$clog2(`SQ_SIZE){1'b0}}
         };
         for (int j=0; j<`RSLEN; j++) begin
             // Packet out
@@ -284,9 +294,9 @@ module RS (
                 is_packet_out[1].csr_op        = rs_table[j].csr_op;
                 is_packet_out[1].valid         = rs_table[j].valid;
                 is_packet_out[1].func_unit     = rs_table[j].func_unit;
+		is_packet_out[1].sq_position     = rs_table[j].sq_position;
             end 
         end
-        // $display("not_ready = %b", not_ready); 
     end
 
     always_comb begin
@@ -313,7 +323,8 @@ module RS (
             1'b1,                    // illegal
             1'b0,                    // csr_op
             1'b0,                     // valid
-	 	    FUNC_NOP                 //func_unit
+	 	    FUNC_NOP,                 //func_unit
+	    {$clog2(`SQ_SIZE){1'b0}}
         };
         for (int k=0; k<`RSLEN; k++) begin
             // Packet out
@@ -341,6 +352,7 @@ module RS (
                 is_packet_out[2].csr_op        = rs_table[k].csr_op;
                 is_packet_out[2].valid         = rs_table[k].valid;
 		        is_packet_out[2].func_unit     = rs_table[k].func_unit;
+		        is_packet_out[2].sq_position     = rs_table[k].sq_position;
             end 
         end
     end
@@ -373,8 +385,9 @@ module RS (
     );
 
     always_ff @(posedge clock) begin
-	    $display("count:%d is_packet[0].T1: %h is_packet[0].T1:%h, line_id:%d", count, display_T1, display_T2, display_line_id);
-        $display("rs_line[0].V2:%h", rs_table[0].V2);
+	    //$display("count:%d display_inst: %h is_packet[0].T1: %h is_packet[0].T1:%h, line_id:%d, rs_valid:%b, out_busy:%b", count, display_inst, display_T1, display_T2, display_line_id, display_valid, out_busy);
+        //$display("rs_line[0].V2:%h", rs_table[0].V2);
+        //$display("not_ready = %b", not_ready); 
     end
     
     

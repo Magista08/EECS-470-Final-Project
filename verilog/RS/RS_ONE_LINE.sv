@@ -10,7 +10,7 @@ module RS_ONE_LINE (
     input             	       clock, reset, enable,
     input 	 				   clear,             // whether clear the RS_line
     // input  					   squash_flag,
-    input [31:0]line_id,    // line_id will not be cleared when clear and reset, remain unchanged
+    input logic [$clog2(`RSLEN)-1:0] line_id,    // line_id will not be cleared when clear and reset, remain unchanged
     // input					sel,
     input DP_PACKET 		   dp_packet,
     input MT_RS_PACKET  	   mt_packet,
@@ -25,6 +25,8 @@ module RS_ONE_LINE (
 	input [4:0]					other_dest_reg2,
 	// position
 	input [1:0] 				my_position,
+
+	input [$clog2(`SQ_SIZE)-1:0] sq_position,
 
 	// OUTPUT
 	output logic  			not_ready,
@@ -57,40 +59,39 @@ module RS_ONE_LINE (
 	在last cycle中，R3对应的mt中带有+, 但在这个cycle中，由于RAW，直
 	接对比mt_tag和rs_tag可能会出问题
 	*/
-	assign out_busy = n_rs_line.busy;
+	//assign out_busy = n_rs_line.busy;
 
     always_comb begin
 		//not_ready = ~(valid_flag1 && valid_flag2 && ~empty);
 
 		// Clear the RS line(n_rs_line)
 		if(clear || reset) begin // add reset
-			n_rs_line = '{
-				line_id,  				 // RSID
-				`NOP,             		 // inst
-				1'b0,				  	 // busy
-				{$clog2(`ROBLEN){1'b0}}, // T
-				{$clog2(`ROBLEN){1'b0}}, // T1
-				{$clog2(`ROBLEN){1'b0}}, // T2
-				1'b0,			     	 // valid1
-				1'b0,             		 // valid2
-				{`XLEN{1'b0}},           // V1
-				{`XLEN{1'b0}},           // V2
-				{`XLEN{1'b0}},           // PC
-				{`XLEN{1'b0}},			 // NPC
-				OPA_IS_RS1,       		 // opa_select
-				OPB_IS_RS2,       		 // opb_select
-				`ZERO_REG,       		 // dest_reg_idx
-				ALU_ADD,         		 // alu_func
-				1'b0,				     // rd_mem
-				1'b0,				     // wr_mem
-				1'b0,				     // cond_branch
-				1'b0,                    // uncond_branch
-				1'b0,				     // halt
-				1'b0,			         // illegal
-				1'b0,				     // csr_op
-				1'b0,  			     	 // valid
-				FUNC_ALU				 // func_unit
-			};
+			n_rs_line.RSID = line_id;
+			n_rs_line.inst = `NOP;
+			n_rs_line.busy = 1'b0;
+			n_rs_line.T    = 0;
+			n_rs_line.T1   = 0;
+			n_rs_line.T2   = 0;
+			n_rs_line.valid1 = 1'b0;
+			n_rs_line.valid2 = 1'b0;
+			n_rs_line.V1 = 0;
+			n_rs_line.V2 = 0;
+			n_rs_line.PC = 0;
+			n_rs_line.NPC = 0;
+			n_rs_line.opa_select = OPA_IS_RS1;
+			n_rs_line.opb_select = OPB_IS_RS2;
+			n_rs_line.dest_reg_idx = `ZERO_REG;
+			n_rs_line.alu_func = ALU_ADD;
+			n_rs_line.rd_mem = 1'b0;
+			n_rs_line.wr_mem = 1'b0;
+			n_rs_line.cond_branch = 1'b0;
+			n_rs_line.uncond_branch = 1'b0;
+			n_rs_line.halt = 1'b0;
+			n_rs_line.illegal = 1'b0;
+			n_rs_line.csr_op = 1'b0;
+			n_rs_line.valid = 1'b0;
+			n_rs_line.func_unit = FUNC_NOP;
+			n_rs_line.sq_position = sq_position;
 			not_ready_flag = 1;
 
 		// clear = 0 conditon
@@ -122,7 +123,7 @@ module RS_ONE_LINE (
 
 						n_rs_line.valid1 = (dp_packet.rs1_instruction && dp_packet.inst.r.rs1 == other_dest_reg1 && other_dest_reg1 != `ZERO_REG)? 0:
 										    valid_flag1;
-						n_rs_line.valid2 = (dp_packet.rs2_instruction && dp_packet.inst.r.rs2 == other_dest_reg2 && other_dest_reg2 != `ZERO_REG)? 0:
+						n_rs_line.valid2 = (dp_packet.rs2_instruction && dp_packet.inst.r.rs2 == other_dest_reg1 && other_dest_reg1 != `ZERO_REG)? 0:
 										    valid_flag2;
 
 					end else begin
@@ -173,6 +174,7 @@ module RS_ONE_LINE (
 					n_rs_line.csr_op = dp_packet.csr_op;
 					n_rs_line.valid = dp_packet.valid;
 					n_rs_line.func_unit = dp_packet.func_unit;
+					n_rs_line.sq_position = sq_position;
 
 					// if (valid_flag1 && valid_flag2) begin // not_ready is to decide 'issue'
 					// 	not_ready_flag = 0;
@@ -183,33 +185,32 @@ module RS_ONE_LINE (
 
 				// inst == NOP condition
 				end else begin
-					n_rs_line = '{
-						line_id,  				 // RSID
-						`NOP,             		 // inst
-						1'b0,				  	 // busy
-						{$clog2(`ROBLEN){1'b0}}, // T
-						{$clog2(`ROBLEN){1'b0}}, // T1
-						{$clog2(`ROBLEN){1'b0}}, // T2
-						1'b0,			     	 // valid1
-						1'b0,             		 // valid2
-						{`XLEN{1'b0}},           // V1
-						{`XLEN{1'b0}},           // V2
-						{`XLEN{1'b0}},           // PC
-						{`XLEN{1'b0}},			 // NPC
-						OPA_IS_RS1,       		 // opa_select
-						OPB_IS_RS2,       		 // opb_select
-						`ZERO_REG,       		 // dest_reg_idx
-						ALU_ADD,         		 // alu_func
-						1'b0,				     // rd_mem
-						1'b0,				     // wr_mem
-						1'b0,				     // cond_branch
-						1'b0,                    // uncond_branch
-						1'b0,				     // halt
-						1'b0,			         // illegal
-						1'b0,				     // csr_op
-						1'b0,  			     	 // valid
-						FUNC_ALU				 // func_unit
-					};
+					n_rs_line.RSID = line_id;
+					n_rs_line.inst = `NOP;
+					n_rs_line.busy = 1'b0;
+					n_rs_line.T    = 0;
+					n_rs_line.T1   = 0;
+					n_rs_line.T2   = 0;
+					n_rs_line.valid1 = 1'b0;
+					n_rs_line.valid2 = 1'b0;
+					n_rs_line.V1 = 0;
+					n_rs_line.V2 = 0;
+					n_rs_line.PC = 0;
+					n_rs_line.NPC = 0;
+					n_rs_line.opa_select = OPA_IS_RS1;
+					n_rs_line.opb_select = OPB_IS_RS2;
+					n_rs_line.dest_reg_idx = `ZERO_REG;
+					n_rs_line.alu_func = ALU_ADD;
+					n_rs_line.rd_mem = 1'b0;
+					n_rs_line.wr_mem = 1'b0;
+					n_rs_line.cond_branch = 1'b0;
+					n_rs_line.uncond_branch = 1'b0;
+					n_rs_line.halt = 1'b0;
+					n_rs_line.illegal = 1'b0;
+					n_rs_line.csr_op = 1'b0;
+					n_rs_line.valid = 1'b0;
+					n_rs_line.func_unit = FUNC_NOP;
+					n_rs_line.sq_position = sq_position;
 					not_ready_flag = 1;
 				end
 			// enable = 0 conditon
@@ -242,7 +243,8 @@ module RS_ONE_LINE (
 						1'b0,			         // illegal
 						1'b0,				     // csr_op
 						1'b0,  			     	 // valid
-						FUNC_ALU				 // func_unit
+						FUNC_ALU,				 // func_unit
+						{$clog2(`SQ_SIZE){1'b0}} // sq_position
 					};
 					not_ready_flag = 1;
 				// RS_line filled (busy = 1)
@@ -298,6 +300,7 @@ module RS_ONE_LINE (
 					n_rs_line.csr_op = rs_line.csr_op;
 					n_rs_line.valid = rs_line.valid;
 					n_rs_line.func_unit = rs_line.func_unit;
+					n_rs_line.sq_position = sq_position;
 
 					// not_ready_flag = n_rs_line.T1 || n_rs_line.T2; // ?
 					not_ready_flag = ~(n_rs_line.valid1 && n_rs_line.valid2);
@@ -312,38 +315,38 @@ module RS_ONE_LINE (
 // 决定是否将n_rs_line的值传递给rs_line
     always_ff @(posedge clock) begin
         if (reset || clear) begin  // if empty=0，rs_line stalls
-			rs_line <= '{
-				line_id,  				 // RSID
-				`NOP,             		 // inst
-				1'b0,				  	 // busy
-				{$clog2(`ROBLEN){1'b0}}, // T
-				{$clog2(`ROBLEN){1'b0}}, // T1
-				{$clog2(`ROBLEN){1'b0}}, // T2
-				1'b0,			     	 // valid1
-				1'b0,             		 // valid2
-				{`XLEN{1'b0}},           // V1
-				{`XLEN{1'b0}},           // V2
-				{`XLEN{1'b0}},           // PC
-				{`XLEN{1'b0}},			 // NPC
-				OPA_IS_RS1,       		 // opa_select
-				OPB_IS_RS2,       		 // opb_select
-				`ZERO_REG,       		 // dest_reg_idx
-				ALU_ADD,         		 // alu_func
-				1'b0,				     // rd_mem
-				1'b0,				     // wr_mem
-				1'b0,				     // cond_branch
-				1'b0,                    // uncond_branch
-				1'b0,				     // halt
-				1'b0,			         // illegal
-				1'b0,				     // csr_op
-				1'b0,  			     	 // valid
-				FUNC_ALU				 // func_unit
-			};
+			rs_line.RSID = line_id;
+			rs_line.inst = `NOP;
+			rs_line.busy = 1'b0;
+			rs_line.T    = 0;
+			rs_line.T1   = 0;
+			rs_line.T2   = 0;
+			rs_line.valid1 = 1'b0;
+			rs_line.valid2 = 1'b0;
+			rs_line.V1 = 0;
+			rs_line.V2 = 0;
+			rs_line.PC = 0;
+			rs_line.NPC = 0;
+			rs_line.opa_select = OPA_IS_RS1;
+			rs_line.opb_select = OPB_IS_RS2;
+			rs_line.dest_reg_idx = `ZERO_REG;
+			rs_line.alu_func = ALU_ADD;
+			rs_line.rd_mem = 1'b0;
+			rs_line.wr_mem = 1'b0;
+			rs_line.cond_branch = 1'b0;
+			rs_line.uncond_branch = 1'b0;
+			rs_line.halt = 1'b0;
+			rs_line.illegal = 1'b0;
+			rs_line.csr_op = 1'b0;
+			rs_line.valid = 1'b0;
+			rs_line.func_unit = FUNC_NOP;
+			rs_line.sq_position = sq_position;
 			not_ready <= 1;
-
+			out_busy <= 1'b0;
 		end else begin
 			rs_line   <= n_rs_line;
 			not_ready <= not_ready_flag;
+			out_busy <= n_rs_line.busy;
 		end
 	end
 	

@@ -88,7 +88,8 @@ module FU_ALU (
     output logic [`XLEN-1:0]                              result,
     output logic                                          busy, // unused
     output logic                                          result_ready,
-    output logic                                          branch_taken
+    output logic                                          branch_taken,
+    output EX_BP_PACKET                                   EX_BP_packet_out
 );
 
     logic [`XLEN-1:0]                                     opa_mux_out, opb_mux_out;
@@ -101,7 +102,13 @@ module FU_ALU (
     logic                                                 next_result_ready;
     logic                                                 next_branch_taken;
 
+    // for branch recovery 2023/12/02
+    logic                                                 next_true_branch_taken;
+    logic [`XLEN-1:0]                                     next_true_result;
+    logic [`XLEN-1:0]                                     next_true_NPC;
+    EX_BP_PACKET                                          next_EX_BP_packet_out;
 
+    logic [1:0] state;
     // ALU opA mux
     always_comb begin
         case (fu_input.opa_select)
@@ -134,6 +141,13 @@ module FU_ALU (
     assign next_result_ready = (fu_input.inst != `NOP);
     assign next_branch_taken = fu_input.uncond_branch || (fu_input.cond_branch && take_conditional);
 
+    // to BP 2023/12/01
+    assign next_EX_BP_packet_out.PC = fu_input.PC;////////////////////////////////wu
+	assign next_EX_BP_packet_out.branch_en = fu_input.uncond_branch | fu_input.cond_branch;/////////////////////////////////wu
+	assign next_EX_BP_packet_out.cond_branch_en = fu_input.cond_branch;///////////////////////////////////wu
+	assign next_EX_BP_packet_out.cond_branch_taken = fu_input.cond_branch & take_conditional;/////////////////////////////wu
+    assign next_EX_BP_packet_out.target_PC = next_result;//////////////////////////////////wuwuwu
+
 
     // Instantiate the ALU
     alu alu_0 (
@@ -156,6 +170,41 @@ module FU_ALU (
         // Output
         .take(take_conditional)
     );
+
+    // Recover PC after complex branch prediction cases 2023/12/02
+    always_comb begin
+        next_true_branch_taken = next_branch_taken;
+        next_true_result = next_result;
+        next_true_NPC = fu_input.PC + 4;
+	state = 0;
+
+        if (fu_input.NPC==fu_input.PC+4 && next_branch_taken==0) begin // BP N, EX N
+            // the most normal untaken case
+            next_true_branch_taken = 0;
+	    state = 0;
+        end 
+        else if (fu_input.NPC==fu_input.PC+4 && next_branch_taken==1) begin // BP N, EX T
+            // the most normal taken case
+            next_true_branch_taken = 1;
+	    state = 1;
+        end
+        else if (fu_input.NPC!=fu_input.PC+4 && next_branch_taken==0) begin // BP T, EX N
+            // should taken in this case for we took branch incorrectly
+            next_true_branch_taken = 1;
+            next_true_result = fu_input.PC + 4;
+	    state = 2;
+        end
+        else if (fu_input.NPC!=fu_input.PC+4 && next_branch_taken==1) begin // BP T, EX T
+            if (fu_input.NPC==next_result) begin
+                // should not taken in this case for we have taken ahead correctly
+                next_true_branch_taken = 0;
+            end else begin
+                // should taken in this case for we have taken ahead incorrectly
+                next_true_branch_taken = 1;
+            end
+	    state = 3;
+        end 
+    end
     
     always_ff @(posedge clock) begin
         if(reset || clear) begin
@@ -167,13 +216,15 @@ module FU_ALU (
             branch_taken <= 0;
 
         end else begin
-            result <= next_result;
+            result <= next_true_result;
             halt <= next_halt;
-            NPC <= next_NPC;
+            NPC <= next_true_NPC;
             tag <= next_tag;
             result_ready <= next_result_ready;
-            branch_taken <= next_branch_taken;
+            branch_taken <= next_true_branch_taken;
+            EX_BP_packet_out <= next_EX_BP_packet_out;
         end
+	//$display("************fu_inst:%h state:%h fu_input.PC:%h fu_input.NPC:%h result:%h opb:%h************",fu_input.inst, state, fu_input.PC, fu_input.NPC, next_result, opb_mux_out);
     end
 
 endmodule
@@ -375,11 +426,83 @@ module FU_MULT (
 endmodule
 
 
-//LOAD--------------------------------------------------------------------------
+//LOAD and STORE--------------------------------------------------------------------------
+module FU_LOAD_STORE (
+    input                                                 clock,
+    input                                                 reset,
+    input                                                 clear,
+    input RS_IS_PACKET                                    fu_input,
 
+    output SQ_LINE                                        FU_LOAD_STORE_out,
+    output logic [$clog2(`SQ_SIZE)-1:0]                         sq_position
+);
 
+    SQ_LINE                                               next_FU_LOAD_STORE_out;
+    logic [$clog2(`SQ_SIZE)-1:0]                          next_sq_position;
+    logic [`XLEN-1:0]                                     next_addr;
 
+    logic [`XLEN-1:0]                                     opa_mux_out, opb_mux_out;
 
-//STORE-------------------------------------------------------------------------
+    // first output
+    assign next_FU_LOAD_STORE_out.valid            = (fu_input.func_unit==FUNC_MEM)? 1 : 0;
+    assign next_FU_LOAD_STORE_out.load_1_store_0   = (fu_input.opb_select==OPB_IS_S_IMM)? 0 : 1;
+    assign next_FU_LOAD_STORE_out.mem_size         = fu_input.inst.s.funct3;
+    assign next_FU_LOAD_STORE_out.word_addr        = next_addr[31:2];
+    assign next_FU_LOAD_STORE_out.res_addr         = next_addr[1:0];
+    assign next_FU_LOAD_STORE_out.value            = (fu_input.opb_select==OPB_IS_S_IMM)? fu_input.rs2_value : 0;
+    assign next_FU_LOAD_STORE_out.T                = fu_input.T;
+    assign next_FU_LOAD_STORE_out.retire_valid     = 0;
+    assign next_FU_LOAD_STORE_out.pre_store_done   = 0;
+    assign next_FU_LOAD_STORE_out.sent_to_CompBuff = 0;
+    assign next_FU_LOAD_STORE_out.NPC              = fu_input.NPC;
+    assign next_FU_LOAD_STORE_out.halt             = fu_input.halt;
+
+    // second output
+    assign next_sq_position = fu_input.sq_position;
+
+    // ALU opA mux
+    always_comb begin
+        case (fu_input.opa_select)
+            OPA_IS_RS1:  opa_mux_out = fu_input.rs1_value;
+            OPA_IS_NPC:  opa_mux_out = fu_input.NPC;
+            OPA_IS_PC:   opa_mux_out = fu_input.PC;
+            OPA_IS_ZERO: opa_mux_out = 0;
+            default:     opa_mux_out = `XLEN'hdeadface;
+        endcase
+    end
+
+    // ALU opB mux
+    always_comb begin
+        case (fu_input.opb_select)
+            // OPB_IS_RS2:   opb_mux_out = fu_input.rs2_value;
+            OPB_IS_I_IMM: opb_mux_out = `RV32_signext_Iimm(fu_input.inst);
+            OPB_IS_S_IMM: opb_mux_out = `RV32_signext_Simm(fu_input.inst);
+            // OPB_IS_B_IMM: opb_mux_out = `RV32_signext_Bimm(fu_input.inst);
+            // OPB_IS_U_IMM: opb_mux_out = `RV32_signext_Uimm(fu_input.inst);
+            // OPB_IS_J_IMM: opb_mux_out = `RV32_signext_Jimm(fu_input.inst);
+            default:      opb_mux_out = `XLEN'hfacefeed;
+        endcase
+    end
+
+    alu alu_1 (
+        .opa(opa_mux_out),
+        .opb(opb_mux_out),
+        .func(fu_input.alu_func),
+
+        .result(next_addr)
+    );
+
+    always_ff @(posedge clock) begin
+        if(reset || clear) begin
+            FU_LOAD_STORE_out <= 0;
+            // next_FU_LOAD_STORE_out <= 0; // not sure what I could do to clear next
+            sq_position <= 0;
+        end else begin
+            FU_LOAD_STORE_out <= next_FU_LOAD_STORE_out;
+            sq_position <= next_sq_position;
+        end
+    end
+
+endmodule
 
 `endif
