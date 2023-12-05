@@ -63,6 +63,7 @@
 `define NUM_FU_LOAD xx
 `define NUM_FU_STORE xx
 `define NUM_FU_MEM 3
+`define CompBuff_SIZE (`NUM_FU_ALU + `NUM_FU_MULT +`NUM_FU_MEM + 1)
 
 // number of mult stages (2, 4, or 8)
 `define MULT_STAGES 4
@@ -620,8 +621,6 @@ typedef struct packed {
     logic [$clog2(`SQ_SIZE)-1:0] sq_position;
 } RS_IS_PACKET;
 
-`define CompBuff_SIZE (`NUM_FU_ALU + `NUM_FU_MULT + 1)
-
 typedef struct packed {
     logic [$clog2(`ROBLEN)-1:0]    T;
     logic [`XLEN-1:0]              value; // also bp_pc
@@ -665,7 +664,7 @@ typedef struct packed {
     logic                          valid;
     logic                          load_1_store_0;
     logic [2:0]                    mem_size;
-    logic [`XLEN-1:2]              word_addr;
+logic [`XLEN-1:2]              word_addr;
 	logic [1:0]                    res_addr;
 	logic [`XLEN-1:0]              value;
 	logic [$clog2(`ROBLEN)-1:0]    T;
@@ -679,6 +678,10 @@ typedef struct packed {
     logic                          halt;
 } SQ_LINE;
 
+typedef struct packed {
+	logic [`SQ_SIZE-1:0]           psel_1;
+    logic [`SQ_SIZE-1:0]           psel_2;
+} PSEL_TABLE;
 
 // typedef struct packed {
 //     logic                          branch_taken;
@@ -778,6 +781,8 @@ typedef struct packed {
     logic                        valid;
 } RT_LSQ_PACKET;
 `endif // __SYS_DEFS_SVH__
+
+
 
 
 

@@ -176,33 +176,33 @@ module FU_ALU (
         next_true_branch_taken = next_branch_taken;
         next_true_result = next_result;
         next_true_NPC = fu_input.PC + 4;
-	state = 0;
+	    state = 0;
 
         if (fu_input.NPC==fu_input.PC+4 && next_branch_taken==0) begin // BP N, EX N
             // the most normal untaken case
             next_true_branch_taken = 0;
-	    state = 0;
+	        state = 0;
         end 
         else if (fu_input.NPC==fu_input.PC+4 && next_branch_taken==1) begin // BP N, EX T
             // the most normal taken case
             next_true_branch_taken = 1;
-	    state = 1;
+	        state = 1;
         end
         else if (fu_input.NPC!=fu_input.PC+4 && next_branch_taken==0) begin // BP T, EX N
             // should taken in this case for we took branch incorrectly
             next_true_branch_taken = 1;
             next_true_result = fu_input.PC + 4;
-	    state = 2;
+	        state = 2;
         end
         else if (fu_input.NPC!=fu_input.PC+4 && next_branch_taken==1) begin // BP T, EX T
             if (fu_input.NPC==next_result) begin
-                // should not taken in this case for we have taken ahead correctly
+                // should not taken in this case for we have taken branch correctly
                 next_true_branch_taken = 0;
             end else begin
-                // should taken in this case for we have taken ahead incorrectly
+                // should taken in this case for we took branch incorrectly
                 next_true_branch_taken = 1;
             end
-	    state = 3;
+	        state = 3;
         end 
     end
     
@@ -224,7 +224,7 @@ module FU_ALU (
             branch_taken <= next_true_branch_taken;
             EX_BP_packet_out <= next_EX_BP_packet_out;
         end
-	//$display("************fu_inst:%h state:%h fu_input.PC:%h fu_input.NPC:%h result:%h opb:%h************",fu_input.inst, state, fu_input.PC, fu_input.NPC, next_result, opb_mux_out);
+	// $display("************fu_inst:%h state:%h fu_input.PC:%h fu_input.NPC:%h result:%h opb:%h************",fu_input.inst, state, fu_input.PC, fu_input.NPC, next_result, opb_mux_out);
     end
 
 endmodule
@@ -433,8 +433,18 @@ module FU_LOAD_STORE (
     input                                                 clear,
     input RS_IS_PACKET                                    fu_input,
 
+
+    // send to CompBuff (for store only)
+    output logic                                          halt,
+    output logic [`XLEN-1:0]                              NPC,
+    output logic [$clog2(`ROBLEN)-1:0]                    tag,
+    output logic [`XLEN-1:0]                              result,
+    // output logic                                          busy,
+    output logic                                          result_ready,
+
+    // send to LSQ
     output SQ_LINE                                        FU_LOAD_STORE_out,
-    output logic [$clog2(`SQ_SIZE)-1:0]                         sq_position
+    output logic [$clog2(`SQ_SIZE)-1:0]                   sq_position
 );
 
     SQ_LINE                                               next_FU_LOAD_STORE_out;
@@ -443,6 +453,21 @@ module FU_LOAD_STORE (
 
     logic [`XLEN-1:0]                                     opa_mux_out, opb_mux_out;
 
+    logic                                                 next_halt;
+    logic [`XLEN-1:0]                                     next_NPC;
+    logic [$clog2(`ROBLEN)-1:0]                           next_tag;
+    logic [`XLEN-1:0]                                     next_result;
+    logic                                                 next_result_ready;
+    
+    // shit output
+    assign next_halt = fu_input.wr_mem? fu_input.halt :0;
+    assign next_NPC = fu_input.wr_mem? fu_input.NPC :0;
+    assign next_tag = fu_input.wr_mem? fu_input.T:0;  
+    // assign busy = (fu_input.inst!=`NOP) & (~result_ready); // unused
+    assign next_result_ready = fu_input.wr_mem? (fu_input.inst != `NOP):0;
+    assign next_result = fu_input.wr_mem? next_addr:0;
+    
+    
     // first output
     assign next_FU_LOAD_STORE_out.valid            = (fu_input.func_unit==FUNC_MEM)? 1 : 0;
     assign next_FU_LOAD_STORE_out.load_1_store_0   = (fu_input.opb_select==OPB_IS_S_IMM)? 0 : 1;
@@ -494,12 +519,29 @@ module FU_LOAD_STORE (
 
     always_ff @(posedge clock) begin
         if(reset || clear) begin
+            // to LSQ
             FU_LOAD_STORE_out <= 0;
             // next_FU_LOAD_STORE_out <= 0; // not sure what I could do to clear next
             sq_position <= 0;
+
+            // to CompBuff
+            result <= {`XLEN{1'b0}};
+            halt <= 0;
+            NPC <= 0;
+            tag <= 0;
+            result_ready <= 0;
+
         end else begin
+            // to LSQ
             FU_LOAD_STORE_out <= next_FU_LOAD_STORE_out;
             sq_position <= next_sq_position;
+$display("next_result_ready:%b fu_input.inst:%h", next_result_ready, fu_input.inst);
+            // to CompBuff
+            result <= next_result;
+            halt <= next_halt;
+            NPC <= next_NPC;
+            tag <= next_tag;
+            result_ready <= next_result_ready;
         end
     end
 

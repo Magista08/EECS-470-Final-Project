@@ -41,8 +41,10 @@ module icache_2way (
     assign Icache_data_out = icache_data[current_index].data;
     assign Icache_valid_out = icache_data[current_index].valid &&
                               (icache_data[current_index].tags == current_tag);
-	assign {icache_if_packet_out[1].inst, icache_if_packet_out[0].inst}  = Icache_data_out;
-	assign icache_if_packet_out[1].valid = Icache_valid_out;
+	//assign {icache_if_packet_out[1].inst, icache_if_packet_out[0].inst}  = Icache_data_out;
+    assign icache_if_packet_out[0].inst  = (proc2Icache_addr[2] == 1) ? Icache_data_out[63:32] : Icache_data_out[31:0];
+    assign icache_if_packet_out[1].inst  = Icache_data_out[63:32];
+	assign icache_if_packet_out[1].valid = Icache_valid_out && (proc2Icache_addr[2] != 1);
 	assign icache_if_packet_out[0].valid = Icache_valid_out;
 
 	assign icache_if_packet_out[2].valid = 0;

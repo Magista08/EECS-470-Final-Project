@@ -29,6 +29,8 @@ module ROB (
     ROB_LINE [`ROBLEN-1:0]      rob_table_n;
     logic [$clog2(`ROBLEN):0]                 count;
 
+
+
     assign head_plus1 = head + 1;
     assign head_plus2 = head + 2;
     assign tail_plus1 = tail + 1;
@@ -191,7 +193,7 @@ module ROB (
     assign RT_packet_out[1].halt = rob_table[head_plus1[$clog2(`ROBLEN)-1:0]].halt;
     //assign RT_packet_out[1].valid = ~((rob_table[head].rd_wr_mem) && rob_table[head_plus1[$clog2(`ROBLEN)-1:0]].rd_wr_mem) && rob_table[head].value_flag 
 		//&& rob_table[head_plus1[$clog2(`ROBLEN)-1:0]].value_flag;
-    assign RT_packet_out[1].valid = RT_packet_out[0].valid && rob_table[head_plus1[$clog2(`ROBLEN)-1:0]].value_flag && ~(rob_table[head].rd_wr_mem && rob_table[head_plus1[$clog2(`ROBLEN)-1:0]].rd_wr_mem);
+    assign RT_packet_out[1].valid = RT_packet_out[0].valid && rob_table[head_plus1[$clog2(`ROBLEN)-1:0]].value_flag && ~(rob_table[head].rd_wr_mem && rob_table[head_plus1[$clog2(`ROBLEN)-1:0]].rd_wr_mem) ;
     assign RT_packet_out[2].dest_reg_idx = (~rob_table[head].value_flag || ~rob_table[head_plus1[$clog2(`ROBLEN)-1:0]].value_flag || 
 						~rob_table[head_plus2[$clog2(`ROBLEN)-1:0]].value_flag) ? 5'b00000 : rob_table[head_plus2[$clog2(`ROBLEN)-1:0]].reg_id;
 	assign RT_packet_out[2].tag = (~rob_table[head].value_flag || ~rob_table[head_plus1[$clog2(`ROBLEN)-1:0]].value_flag || 
@@ -207,6 +209,7 @@ module ROB (
 		//rob_table[head_plus2[$clog2(`ROBLEN)-1:0]].value_flag;
     assign RT_packet_out[2].valid = RT_packet_out[1].valid && rob_table[head_plus2[$clog2(`ROBLEN)-1:0]].value_flag && ~((rob_table[head].rd_wr_mem || rob_table[head_plus1[$clog2(`ROBLEN)-1:0]].rd_wr_mem) && 
 					rob_table[head_plus2[$clog2(`ROBLEN)-1:0]].rd_wr_mem);
+    
 
 
     assign RS_packet_out[0].V1 = rob_table[MT_packet_in[0].T1].value;

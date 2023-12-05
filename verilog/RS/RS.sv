@@ -388,6 +388,7 @@ module RS (
 	    //$display("count:%d display_inst: %h is_packet[0].T1: %h is_packet[0].T1:%h, line_id:%d, rs_valid:%b, out_busy:%b", count, display_inst, display_T1, display_T2, display_line_id, display_valid, out_busy);
         //$display("rs_line[0].V2:%h", rs_table[0].V2);
         //$display("not_ready = %b", not_ready); 
+        $display("sq_position in RS: %b", sq_tail_in);
     end
     
     

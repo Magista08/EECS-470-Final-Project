@@ -2,6 +2,8 @@
 
 module BP(
     input  clock, reset,
+    input  squash_flag,
+    input  logic [`XLEN-1:0] squash_pc,
     input IF_ID_PACKET [`N-1:0] if_packet_in,    // pc from if stage
     input EX_BP_PACKET [`N-1:0] ex_bp_packet_in,
     
@@ -145,7 +147,7 @@ module BP(
 
     // Relative PC
     logic [`XLEN-1:0] link_pc;
-    assign link_pc = jump[0] ?  result[0] : jump[1] ? result[1] : result[2];
+    assign link_pc = jump[0] ?  ex_tpc[0] : jump[1] ? ex_tpc[1] : ex_tpc[2];
     
     RAS ras0(
         // Inputs
@@ -172,9 +174,9 @@ module BP(
                 bp_packet_out[i].PC  = if_pc[i];
                 bp_packet_out[i].NPC = return_address;
                 bp_taken_out[i] = 1'b1;
-            end else if (jump[i]) begin
+            end else if (jump[i] && hit[i]) begin
                 bp_packet_out[i].PC  = if_pc[i];
-                bp_packet_out[i].NPC = result[i];
+                bp_packet_out[i].NPC = predict_pc[i];
                 bp_taken_out[i] = 1'b1;
             end else if (cond_branch_de[i] && bp_taken[i] && hit[i]) begin
                 bp_packet_out[i].PC  = if_pc[i];
@@ -219,7 +221,7 @@ module BP(
     genvar bp_k;
     generate
         assign bp_packet_out[0].inst  = if_packet_in[0].inst;
-        assign bp_packet_out[0].valid = if_packet_in[0].valid && !bp_taken_out[0] && bp_packet_out[0].inst != `NOP;
+        assign bp_packet_out[0].valid = if_packet_in[0].valid && bp_packet_out[0].inst != `NOP;
         for (bp_k=1; bp_k<`N; bp_k++) begin
             assign bp_packet_out[bp_k].inst  = bp_taken_out[bp_k-1] ? `NOP : if_packet_in[bp_k].inst;
             assign bp_packet_out[bp_k].valid = if_packet_in[bp_k].valid && !bp_taken_out[bp_k-1] && bp_packet_out[bp_k].inst != `NOP;
@@ -230,6 +232,8 @@ module BP(
     always_ff @(posedge clock) begin
         if (reset) begin
             bp_last_valid_npc <= {`XLEN{1'b0}};
+        end else if (squash_flag) begin
+            bp_last_valid_npc <= squash_pc; 
         end else begin
             bp_last_valid_npc <= bp_npc_out;
             // $display("bp_npc_out_out: %h", bp_npc_out);

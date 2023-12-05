@@ -109,6 +109,7 @@ module DCACHE(
 	income_data = Dmem2proc_data;
 	for(int i=0; i<4; i++) begin
 	    if(mshr_state_completed[i]) begin
+		$display("heard");
 		n_dcache_table[mshr_table[i].idx].line[~mshr_table[i].ptr].valid = 1'b1;
 		n_dcache_table[mshr_table[i].idx].line[~mshr_table[i].ptr].value = income_data;
 		//n_dcache_table[mshr_table[i].idx].line[~mshr_table[i].ptr].value = Dmem2proc_data;
@@ -314,6 +315,7 @@ module DCACHE(
         proc2Dmem_data = 32'h0;
 	icache_busy = 0;
         if (mem_req) begin
+	$display("sent");
             proc2Dmem_command = BUS_LOAD;
             proc2Dmem_addr = {in_tag, in_idx, 3'b0};
 	    icache_busy = 1;
@@ -322,6 +324,7 @@ module DCACHE(
             proc2Dmem_addr = evict_addr;
             proc2Dmem_data = evict_data;
 	    icache_busy = 1;
+	$display("evict");
         end
     end
 
@@ -374,8 +377,8 @@ module DCACHE(
 		    mshr_state_table[m] <= INVALID;
 		end
 	    end
-	    $display("evict_valid:%b completed:%b state:%b income_data:%h", evict_valid, mshr_state_completed, mshr_state_table, income_data);
-	    $display("idx0:%h idx1:%h idx2:%h idx3:%h", mshr_table[0].value[7:0], mshr_table[1].value[7:0], mshr_table[2].value[7:0], mshr_table[3].value[7:0]);
+	    //$display("evict_valid:%b completed:%b state:%b income_data:%h", evict_valid, mshr_state_completed, mshr_state_table, income_data);
+	    //$display("idx0:%h idx1:%h idx2:%h idx3:%h", mshr_table[0].value[7:0], mshr_table[1].value[7:0], mshr_table[2].value[7:0], mshr_table[3].value[7:0]);
 	end
     end
 endmodule    

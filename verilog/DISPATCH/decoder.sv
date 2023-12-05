@@ -104,6 +104,7 @@ module DEC (
                     opb_select      = OPB_IS_S_IMM;
                     wr_mem          = `TRUE;
                     rs1_instruction = 1;
+                    rs2_instruction = 1;
                     func_unit       = FUNC_MEM;
                 end
                 `RV32_ADDI: begin

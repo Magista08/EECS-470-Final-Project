@@ -57,6 +57,7 @@ module stage_if (
 
 	end
 
+
 	/*always_comb begin
 		for(integer j=0; j<=2; j++) begin
 			proc2Imem_addr[j] = {PC_reg[j][`XLEN-1:3], 3'b0};
@@ -74,19 +75,20 @@ module stage_if (
 				if_dp_packet_out[j].valid= 0;			
 			end
 		end else begin
-			if_dp_packet_out[0].inst      = (~if_valid || Icache_if_packet_in[0].inst == 0)? `NOP : Icache_if_packet_in[0].inst;	
+
+			if_dp_packet_out[0].inst      = (~if_valid0 || Icache_if_packet_in[0].inst == 0)? `NOP : Icache_if_packet_in[0].inst;	
 			if_dp_packet_out[0].PC        = PC_reg[0];
 			
 			if_dp_packet_out[0].NPC       = NPC_reg[0];
-			if_dp_packet_out[0].valid     = if_valid && Icache_if_packet_in[0].inst != 0;
+			if_dp_packet_out[0].valid     = if_valid0 && Icache_if_packet_in[0].inst != 0;
 
 
 
-			if_dp_packet_out[1].inst      = (~if_valid || Icache_if_packet_in[1].inst == 0) ? `NOP : Icache_if_packet_in[1].inst;	
+			if_dp_packet_out[1].inst      = (~if_valid1 || Icache_if_packet_in[1].inst == 0) ? `NOP : Icache_if_packet_in[1].inst;	
 			if_dp_packet_out[1].PC        = PC_reg[1];
 			
 			if_dp_packet_out[1].NPC       = NPC_reg[1];
-			if_dp_packet_out[1].valid     = if_valid && Icache_if_packet_in[0].inst != 0;
+			if_dp_packet_out[1].valid     = if_valid1 && Icache_if_packet_in[0].inst != 0;
 
 
 

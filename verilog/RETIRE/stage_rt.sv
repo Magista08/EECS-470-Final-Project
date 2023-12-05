@@ -38,7 +38,7 @@ module stage_rt(
     assign rt_dp_packet_out[1].value       = (rob_rt_packet_in[1].dest_reg_idx != `ZERO_REG) 
                                             ? rob_rt_packet_in[1].value : 0;
     assign rt_dp_packet_out[1].valid       = (fake_halt) ? 0 : ((rob_rt_packet_in[1].dest_reg_idx != `ZERO_REG) && 
-                                             ~(rob_rt_packet_in[0].valid && rob_rt_packet_in[0].take_branch)) 
+                                             ~(rob_rt_packet_in[0].valid && (rob_rt_packet_in[0].take_branch || rob_rt_packet_in[0].halt))) 
                                              ? rob_rt_packet_in[1].valid : 0;
 
     assign rt_dp_packet_out[2].retire_reg  = (rob_rt_packet_in[2].dest_reg_idx != `ZERO_REG) 
@@ -46,7 +46,7 @@ module stage_rt(
     assign rt_dp_packet_out[2].value       = (rob_rt_packet_in[2].dest_reg_idx != `ZERO_REG)                                          
                                             ? rob_rt_packet_in[2].value : 0;
     assign rt_dp_packet_out[2].valid       = (fake_halt) ? 0 : ((rob_rt_packet_in[2].dest_reg_idx != `ZERO_REG) && 
-                                           ~((rob_rt_packet_in[1].valid && rob_rt_packet_in[1].take_branch) || (rob_rt_packet_in[0].valid & rob_rt_packet_in[0].take_branch)))
+                                           ~((rob_rt_packet_in[1].valid && (rob_rt_packet_in[1].take_branch || rob_rt_packet_in[1].halt)) || ((rob_rt_packet_in[0].valid & rob_rt_packet_in[0].take_branch || rob_rt_packet_in[0].halt))))
                                             ? rob_rt_packet_in[2].valid : 0;
 
     assign rt_mt_packet_out[0].retire_tag  = rob_rt_packet_in[0].tag;
@@ -56,10 +56,10 @@ module stage_rt(
     assign rt_mt_packet_out[0].valid       = (fake_halt) ? 0 : (rob_rt_packet_in[0].dest_reg_idx != `ZERO_REG)
                                             ? rob_rt_packet_in[0].valid : 0;
     assign rt_mt_packet_out[1].valid       = (fake_halt) ? 0 : ((rob_rt_packet_in[1].dest_reg_idx != `ZERO_REG) && 
-                                             ~(rob_rt_packet_in[0].valid && rob_rt_packet_in[0].take_branch)) 
+                                             ~(rob_rt_packet_in[0].valid && (rob_rt_packet_in[0].take_branch || rob_rt_packet_in[0].halt))) 
                                              ? rob_rt_packet_in[1].valid : 0;
     assign rt_mt_packet_out[2].valid       = (fake_halt) ? 0 : ((rob_rt_packet_in[2].dest_reg_idx != `ZERO_REG) && 
-                                           ~((rob_rt_packet_in[1].valid && rob_rt_packet_in[1].take_branch) || (rob_rt_packet_in[0].valid & rob_rt_packet_in[0].take_branch)))
+                                           ~((rob_rt_packet_in[1].valid && (rob_rt_packet_in[1].take_branch || rob_rt_packet_in[1].halt)) || (rob_rt_packet_in[0].valid && (rob_rt_packet_in[0].take_branch || rob_rt_packet_in[0].halt))))
                                             ? rob_rt_packet_in[2].valid : 0;
 
     assign rt_lsq_packet_out[0].retire_tag  = rob_rt_packet_in[0].tag;
@@ -69,10 +69,10 @@ module stage_rt(
     assign rt_lsq_packet_out[0].valid       = (fake_halt) ? 0 : (rob_rt_packet_in[0].dest_reg_idx != `ZERO_REG)
                                             ? rob_rt_packet_in[0].valid : 0;
     assign rt_lsq_packet_out[1].valid       = (fake_halt) ? 0 : ((rob_rt_packet_in[1].dest_reg_idx != `ZERO_REG) && 
-                                             ~(rob_rt_packet_in[0].valid && rob_rt_packet_in[0].take_branch)) 
+                                             ~(rob_rt_packet_in[0].valid && (rob_rt_packet_in[0].take_branch || rob_rt_packet_in[0].halt))) 
                                              ? rob_rt_packet_in[1].valid : 0;
     assign rt_lsq_packet_out[2].valid       = (fake_halt) ? 0 : ((rob_rt_packet_in[2].dest_reg_idx != `ZERO_REG) && 
-                                           ~((rob_rt_packet_in[1].valid && rob_rt_packet_in[1].take_branch) || (rob_rt_packet_in[0].valid & rob_rt_packet_in[0].take_branch)))
+                                           ~((rob_rt_packet_in[1].valid && (rob_rt_packet_in[1].take_branch || rob_rt_packet_in[1].halt)) || (rob_rt_packet_in[0].valid && (rob_rt_packet_in[0].take_branch || rob_rt_packet_in[0].halt))))
                                             ? rob_rt_packet_in[2].valid : 0;
 
     // Once branch is taken in any inst, squash 
@@ -90,10 +90,10 @@ module stage_rt(
     // Retire valid: valid=1 means the instruction can be retired
     // But if the last one or two instructions are halted (WFI), then the current instruction can not be retired, valid=0
     assign valid[0] =  (fake_halt) ? 0 : rob_rt_packet_in[0].valid;
-    assign valid[1] = (fake_halt) ? 0 : ~ (rob_rt_packet_in[0].valid && rob_rt_packet_in[0].halt) 
+    assign valid[1] = (fake_halt) ? 0 : ~ (rob_rt_packet_in[0].valid && (rob_rt_packet_in[0].halt || rob_rt_packet_in[0].take_branch)) 
                        ? rob_rt_packet_in[1].valid : 0;
-    assign valid[2] = (fake_halt) ? 0 : ~((rob_rt_packet_in[0].valid && rob_rt_packet_in[0].halt) || (rob_rt_packet_in[1].valid && 
-			rob_rt_packet_in[1].halt)) ? rob_rt_packet_in[2].valid : 0;
+    assign valid[2] = (fake_halt) ? 0 : ~((rob_rt_packet_in[0].valid && (rob_rt_packet_in[0].halt || rob_rt_packet_in[0].take_branch)) || (rob_rt_packet_in[1].valid && 
+			(rob_rt_packet_in[1].halt || rob_rt_packet_in[1].take_branch))) ? rob_rt_packet_in[2].valid : 0;
 
     assign NPC[0]   =  rob_rt_packet_in[0].NPC;
     assign NPC[1]   =  rob_rt_packet_in[1].NPC;
@@ -101,7 +101,7 @@ module stage_rt(
 
     assign halt = (fake_halt && ~rt_busy);
 
-    assign n_fake_halt = (fake_halt) ? fake_halt : (rob_rt_packet_in[0].valid && rob_rt_packet_in[0].halt) || (rob_rt_packet_in[1].valid && rob_rt_packet_in[1].halt) || (rob_rt_packet_in[2].valid && rob_rt_packet_in[2].halt) ? 1 : fake_halt;
+    assign n_fake_halt = (fake_halt) ? fake_halt : (rob_rt_packet_in[0].valid && rob_rt_packet_in[0].halt) || (~(rob_rt_packet_in[0].valid && rob_rt_packet_in[0].take_branch) && rob_rt_packet_in[1].valid && rob_rt_packet_in[1].halt) || (~(rob_rt_packet_in[0].valid && rob_rt_packet_in[0].take_branch) && ~(rob_rt_packet_in[1].valid && rob_rt_packet_in[1].take_branch) && rob_rt_packet_in[2].valid && rob_rt_packet_in[2].halt) ? 1 : fake_halt;
     //assign n_fake_halt_npc = (fake_halt) ? fake_halt_npc : (rob_rt_packet_in[0].valid && rob_rt_packet_in[0].halt) ? rob_rt_packet_in[0].NPC : (rob_rt_packet_in[1].valid && rob_rt_packet_in[1].halt) ? rob_rt_packet_in[1].NPC : (rob_rt_packet_in[2].valid && rob_rt_packet_in[2].halt) ? rob_rt_packet_in[2].NPC : fake_halt_npc;
 
     always_ff @(posedge clock) begin
@@ -110,6 +110,8 @@ module stage_rt(
 	    //fake_halt_npc <= {`XLEN{1'b0}};
 	end else begin
 	    fake_halt <= n_fake_halt;
+
+	
 	    //fake_halt_npc <= n_fake_halt_npc;
 	end
     end

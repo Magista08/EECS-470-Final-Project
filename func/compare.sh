@@ -3,7 +3,7 @@
 set -eu
 
 if [ $# -ne 2 ]; then
-    echo "Usage: ./func/compare.sh <test_name> <compare_content = wb=1, out=2, all=3>"
+    echo "Usage: ./func/compare.sh <test_name> <compare_content = wb=1, out=2, mem=3, all=4>"
     exit 1
 fi
 
@@ -11,7 +11,7 @@ TEST_NAME=$1
 DIFF_TYPE=$2
 
 FILE_TYPE="wb"
-if [ $DIFF_TYPE -eq 2 ]; then
+if [ $DIFF_TYPE -ne 1 ]; then
     FILE_TYPE="out"
 fi
 
@@ -47,6 +47,15 @@ fi
 # Get the correct output
 make $TEST_NAME.out
 
+if [ $DIFF_TYPE -eq 3 ]; then
+    FILE_TYPE="mem"
+
+    # Create the correct output file
+    cat correct_output/$TEST_NAME.out | grep "@@@ mem" > correct_output/$TEST_NAME.$FILE_TYPE
+
+    # Create the output file
+    cat output/$TEST_NAME.out | grep "@@@ mem" > output/$TEST_NAME.$FILE_TYPE
+fi
 
 # Compare
 diff -u correct_output/$TEST_NAME.$FILE_TYPE output/$TEST_NAME.$FILE_TYPE > output/$TEST_NAME.$FILE_TYPE.out.txt | true 

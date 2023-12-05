@@ -1,5 +1,5 @@
-`include "sys_defs.svh"
-`include "ISA.svh"
+`include "verilog/sys_defs.svh"
+`include "verilog/ISA.svh"
 // `include "psel_gen.sv"
 
 module LSQ (
@@ -16,6 +16,8 @@ module LSQ (
     input RT_LSQ_PACKET [2:0]                   RT_packet, // valid, retire_tag
     // From DCache (need to give LOAD value if no match)
     input DCACHE_LSQ_PACKET [1:0]               DC_SQ_packet, // busy, valid, value, address, NPC
+    // From Complete Buffer
+    input                                       LSQ_buffer_busy, // if busy, then SQ cannot send LOAD to Complete Buffer (there is only one LOAD entry in Complete Buffer)
 
     // To RS
     output logic [2:0] [$clog2(`SQ_SIZE)-1:0]   SQ_tail, // I need to give RS each tail so that the positions can get into FU and come back to SQ
@@ -24,7 +26,7 @@ module LSQ (
     // To Complete (LOAD instruction need to go into complete buffer, only 1 for once?!)
     output EX_PACKET                            SQ_COMP_packet,
     // To DCache
-    output LSQ_DCACHE_PACKET                    SQ_DC_packet,
+    output LSQ_DCACHE_PACKET                    SQ_DC_packet
 
     // output SQ_LINE [`SQ_SIZE-1:0]                      SQ, next_SQ,
     // output EX_PACKET                                   next_SQ_COMP_packet,
@@ -60,7 +62,7 @@ module LSQ (
         if (gnt1!=0) begin
             // gnt1_log = $clog2(gnt1);
             for (int i=7; i>=0; i--) begin
-                if (gnt1[i]==0) begin
+                if (gnt1[i]==1) begin
                     gnt1_log = i;
                     break;
                 end
@@ -69,7 +71,7 @@ module LSQ (
         if (gnt2!=0) begin
             // gnt2_log = $clog2(gnt2);
             for (int i=7; i>=0; i--) begin
-                if (gnt2[i]==0) begin
+                if (gnt2[i]==1) begin
                     gnt2_log = i;
                     break;
                 end
@@ -116,6 +118,8 @@ module LSQ (
 
             // Give RS tail information
             SQ_tail[0] = tail[$clog2(`SQ_SIZE)-1:0];
+            $display("SQ_tail[0]:%b, SQ_tail[1]:%b, SQ_tail[2]:%b", SQ_tail[0], SQ_tail[1], SQ_tail[2]);
+            $display("NPC:%h, inst: %h, tail:%b, SQ_tail[0]:%b", DP_packet[1].NPC, DP_packet[1].inst, tail, SQ_tail[1]);
             SQ_tail[1] = tail[$clog2(`SQ_SIZE)-1:0] + (DP_packet[0].wr_mem || DP_packet[0].rd_mem);
             SQ_tail[2] = tail[$clog2(`SQ_SIZE)-1:0] + (DP_packet[0].wr_mem || DP_packet[0].rd_mem) + (DP_packet[1].wr_mem || DP_packet[1].rd_mem);
 
@@ -124,9 +128,11 @@ module LSQ (
             for (int i=0; i<3; i=i+1) begin
                 if (DP_packet[i].wr_mem) begin
                     next_SQ[SQ_tail[i]].load_1_store_0 = 0;
+                    $display("store!");
                 end
                 if (DP_packet[i].rd_mem) begin
                     next_SQ[SQ_tail[i]].load_1_store_0 = 1;
+	            
                 end
             end
 
@@ -136,6 +142,9 @@ module LSQ (
                 if (LOAD_STORE_input[i].valid==1) begin
                     // todo: give information according to the position
                     next_SQ[position[i]] = LOAD_STORE_input[i];
+		    $display("position[0]:%b, position[1]:%b, position[2]:%b", position[0], position[1], position[2]);
+                    $display("LOAD_STORE_input[0].valid:%b, LOAD_STORE_input[1].valid:%b, LOAD_STORE_input[2].valid:%b", LOAD_STORE_input[0].valid, LOAD_STORE_input[1].valid, LOAD_STORE_input[2].valid);
+		    $display("fuin_valid:%b", LOAD_STORE_input[0].valid);
                 end    
             end
 
@@ -161,7 +170,7 @@ module LSQ (
                     //     next_SQ[i].addr_cannot_to_DCache = 1;
                     // end
                     if (psel_table.psel_1!=0) begin // may be wrong
-                        next_SQ[i].addr_cannot_to_DCache = 1;
+                        next_SQ[i].addr_cannot_to_DCache = 1;     // for WAW and RAW hazard detection
                     end
 
                 end else begin // h and t in different circles
@@ -238,7 +247,7 @@ module LSQ (
 
 
             // [5.] Store to load forwarding
-            // determin pre_store_done
+            // determine pre_store_done
             psel_table = 0;
             for (int i=0; i<`SQ_SIZE; i=i+1) begin
                 if ((next_SQ[i].valid==1) && (next_SQ[i].load_1_store_0==1) && (next_SQ[i].retire_valid==0)) begin // For every load
@@ -309,7 +318,7 @@ module LSQ (
 
 
                     // data forwarding from queue
-                    if (next_SQ[i].pre_store_done==1) begin
+                    if (next_SQ[i].pre_store_done==1 ) begin
                         psel_table = 0;
 
                         for (int j=0; j<`SQ_SIZE; j=j+1) begin
@@ -340,7 +349,11 @@ module LSQ (
                                         
 
                             next_SQ[i].value = next_SQ[gnt1_log].value; // forwarding here
-                            next_SQ[i].retire_valid = 1;
+                            if(gnt1_log != 0) begin
+                                next_SQ[i].retire_valid = 1;
+                            end else begin
+                                next_SQ[i].retire_valid = 0;
+                            end
 
                         end else begin // h and t in different circles
                             // use psel_table.psel_2
@@ -389,16 +402,20 @@ module LSQ (
 
 
                             next_SQ[i].value = next_SQ[gnt2_log].value; // forwarding here
-                            next_SQ[i].retire_valid = 1;                                  
+                            if(gnt2_log != 0) begin
+                                next_SQ[i].retire_valid = 1;
+                            end else begin
+                                next_SQ[i].retire_valid = 0;
+                            end                                 
                         end
 
                         // get data from DCache or send data to DCache
                         if (next_SQ[i].retire_valid==0) begin
-                            if ((DC_SQ_packet[0].st_or_ld==1) && (DC_SQ_packet[0].valid==1) && (DC_SQ_packet[0].address=={next_SQ[i].word_addr, next_SQ[i].res_addr}) && (DC_SQ_packet[0].NPC==next_SQ[i].NPC)) begin
+                            if ((DC_SQ_packet[0].st_or_ld==1) && (DC_SQ_packet[0].valid==1) && (DC_SQ_packet[0].address=={next_SQ[i].word_addr, next_SQ[i].res_addr})) begin
                                 next_SQ[i].value = DC_SQ_packet[0].value;
                                 next_SQ[i].retire_valid = 1;    
 
-                            end else if ((DC_SQ_packet[1].st_or_ld==1) && (DC_SQ_packet[1].valid==1) && (DC_SQ_packet[1].address=={next_SQ[i].word_addr, next_SQ[i].res_addr}) && (DC_SQ_packet[1].NPC==next_SQ[i].NPC)) begin
+                            end else if ((DC_SQ_packet[1].st_or_ld==1) && (DC_SQ_packet[1].valid==1) && (DC_SQ_packet[1].address=={next_SQ[i].word_addr, next_SQ[i].res_addr})) begin
                                 next_SQ[i].value = DC_SQ_packet[1].value;
                                 next_SQ[i].retire_valid = 1;
 
@@ -415,14 +432,14 @@ module LSQ (
                         end
                     end
                 end
-            end
+            end                             // for loop end, may we need to add to_DC_full=0 here?
 
 
             // [6.] Send load to complete buffer according to retire_valid (send only 1 load here)
             if (next_head_flag==next_tail_flag) begin // h and t in the same circle
                 for (int i=0; i<`SQ_SIZE; i=i+1) begin
                     if (i>=next_head_idx && i<next_tail_idx) begin
-                        if ((next_SQ[i].valid==1) && (next_SQ[i].load_1_store_0==1) && (next_SQ[i].retire_valid==1) && (next_SQ[i].sent_to_CompBuff==0)) begin
+                        if ((next_SQ[i].valid==1) && (next_SQ[i].load_1_store_0==1) && (next_SQ[i].retire_valid==1) && (next_SQ[i].sent_to_CompBuff==0) && (LSQ_buffer_busy==0)) begin
                             next_SQ_COMP_packet.T = next_SQ[i].T;
                             next_SQ_COMP_packet.value = DC_SQ_packet[0].value;
                             next_SQ_COMP_packet.valid = next_SQ[i].valid;
@@ -439,7 +456,7 @@ module LSQ (
                 for (int i=0; i<`SQ_SIZE; i=i+1) begin
                     load_sent_in_lower = 0;             
                     if (i>=next_head_idx && i<`SQ_SIZE) begin
-                        if ((next_SQ[i].valid==1) && (next_SQ[i].load_1_store_0==1) && (next_SQ[i].retire_valid==1) && (next_SQ[i].sent_to_CompBuff==0)) begin
+                        if ((next_SQ[i].valid==1) && (next_SQ[i].load_1_store_0==1) && (next_SQ[i].retire_valid==1) && (next_SQ[i].sent_to_CompBuff==0) && (LSQ_buffer_busy==0)) begin
                             next_SQ_COMP_packet.T = next_SQ[i].T;
                             next_SQ_COMP_packet.value = DC_SQ_packet[0].value;
                             next_SQ_COMP_packet.valid = next_SQ[i].valid;
@@ -455,7 +472,7 @@ module LSQ (
                 end
                 if (load_sent_in_lower==0) begin
                     for (int i=0; i<next_tail_idx; i=i+1) begin
-                        if ((next_SQ[i].valid==1) && (next_SQ[i].load_1_store_0==1) && (next_SQ[i].retire_valid==1) && (next_SQ[i].sent_to_CompBuff==0)) begin
+                        if ((next_SQ[i].valid==1) && (next_SQ[i].load_1_store_0==1) && (next_SQ[i].retire_valid==1) && (next_SQ[i].sent_to_CompBuff==0) && (LSQ_buffer_busy==0)) begin
                             next_SQ_COMP_packet.T = next_SQ[i].T;
                             next_SQ_COMP_packet.value = DC_SQ_packet[0].value;
                             next_SQ_COMP_packet.valid = next_SQ[i].valid;
@@ -499,8 +516,8 @@ module LSQ (
                 next_SQ[next_head_idx] = 0;
                 next_head = head + 1;
             end
-
         end  
+        to_DC_full = 0;
     end
 
 
@@ -526,9 +543,11 @@ module LSQ (
         end else begin
             SQ <= next_SQ;
             head <= next_head;
-            tail <= next_tail;
+            tail <= #1 next_tail;
             SQ_COMP_packet <= next_SQ_COMP_packet;
             SQ_DC_packet <= next_SQ_DC_packet;
+	    $display("next_head_idx:%b next_SQ[next_head_idx].valid:%b next_SQ[next_head_idx].load_1_store_0:%b next_SQ[next_head_idx].retire_valid:%b to_DC_full:%b DC_SQ_packet[0].busy:%b DC_SQ_packet[1].busy:%b next_SQ[next_head_idx].addr_cannot_to_DCache:%b", next_head_idx,next_SQ[next_head_idx].valid,next_SQ[next_head_idx].load_1_store_0, next_SQ[next_head_idx].retire_valid,to_DC_full,DC_SQ_packet[0].busy, DC_SQ_packet[1].busy,next_SQ[next_head_idx].addr_cannot_to_DCache);
+	    $display("next_SQ_DC_packet.valid:%b next_SQ_DC_packet.address:%h next_SQ_DC_packet.value:%h", next_SQ_DC_packet.valid, next_SQ_DC_packet.address, next_SQ_DC_packet.value);
         end
     end
 
@@ -542,11 +561,11 @@ module PSEL_1bit (
 
     logic [7:0] pre_req;
 
-    assign gnt[0] = req[0];
-    assign pre_req[0] = req[0];
+    assign gnt[7] = req[7];
+    assign pre_req[7] = req[7];
     genvar i;
-    for(i = 1; i<8; i++)begin
-        assign gnt[i] = req[i] & ~pre_req[i-1];
-        assign pre_req[i] = req[i] | pre_req[i-1];
+    for(i = 6; i>=0; i--)begin
+        assign gnt[i] = req[i] & ~pre_req[i+1];
+        assign pre_req[i] = req[i] | pre_req[i+1];
     end
 endmodule 
