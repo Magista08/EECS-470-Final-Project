@@ -308,7 +308,7 @@ module pipeline (
     //                  DP                          //
     //                                              //
     //////////////////////////////////////////////////
-DP_PACKET [2:0] dp_reg;
+    // DP_PACKET [2:0] dp_reg;
 
 
     DP dp0 (
@@ -319,17 +319,17 @@ DP_PACKET [2:0] dp_reg;
         .rt_packet(rt_dp_packet),
 
         // output
-        .dp_packet(dp_reg)
+        .dp_packet(dp_packet_out)
     );
 
-always_ff @(posedge clock) begin
-    if(reset) begin
-        dp_packet_out <= 0;
-    end else begin
-        dp_packet_out <= dp_reg;
-    end
+// always_ff @(posedge clock) begin
+//     if(reset) begin
+//         dp_packet_out <= 0;
+//     end else begin
+//         dp_packet_out <= dp_reg;
+//     end
 
-end
+// end
     
 
     //////////////////////////////////////////////////
@@ -433,7 +433,7 @@ end
                 1'b0,                    // csr_op
                 1'b0,                     // valid
                 FUNC_NOP,			//func_unit
-		{$clog2(`SQ_SIZE){1'b0}}
+		        {$clog2(`SQ_SIZE){1'b0}}
             };
             is_ex_reg[1] <= {
                 {$clog2(`ROBLEN){1'b0}}, // T
@@ -459,7 +459,7 @@ end
                 1'b0,                    // csr_op
                 1'b0,                     // valid
 		        FUNC_NOP,			//func_unit
-		{$clog2(`SQ_SIZE){1'b0}}
+		        {$clog2(`SQ_SIZE){1'b0}}
             };
             is_ex_reg[2] <= {
                 {$clog2(`ROBLEN){1'b0}}, // T
@@ -485,7 +485,7 @@ end
                 1'b0,                    // csr_op
                 1'b0,                     // valid
                 FUNC_NOP,			//func_unit
-		{$clog2(`SQ_SIZE){1'b0}}
+		        {$clog2(`SQ_SIZE){1'b0}}
             };
         end else begin
             is_ex_reg <= rs_packet_out;
@@ -512,6 +512,14 @@ end
     //                  EX-Stage                    //
     //                                              //
     //////////////////////////////////////////////////
+
+    always_comb begin
+        $display("---------Enterring EX------------");
+        $display("DP_packet[0].inst: %h, DP_packet[0].valid:%b, DP_packet[0].rd_mem:%b, DP_packet[0].wr_mem:%b", dp_packet_out[0].inst, dp_packet_out[0].valid, dp_packet_out[0].rd_mem, dp_packet_out[0].wr_mem);
+        $display("DP_packet[1].inst: %h, DP_packet[1].valid:%b, DP_packet[1].rd_mem:%b, DP_packet[1].wr_mem:%b", dp_packet_out[1].inst, dp_packet_out[1].valid, dp_packet_out[1].rd_mem, dp_packet_out[1].wr_mem);
+        $display("DP_packet[2].inst: %h, DP_packet[2].valid:%b, DP_packet[2].rd_mem:%b, DP_packet[2].wr_mem:%b", dp_packet_out[2].inst, dp_packet_out[2].valid, dp_packet_out[2].rd_mem, dp_packet_out[2].wr_mem);
+        $display("----------------------------------");
+    end
 
     EX stage_ex0(
         .clock(clock),

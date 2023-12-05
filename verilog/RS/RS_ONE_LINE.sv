@@ -300,7 +300,7 @@ module RS_ONE_LINE (
 					n_rs_line.csr_op = rs_line.csr_op;
 					n_rs_line.valid = rs_line.valid;
 					n_rs_line.func_unit = rs_line.func_unit;
-					n_rs_line.sq_position = sq_position;
+					n_rs_line.sq_position = rs_line.sq_position;
 
 					// not_ready_flag = n_rs_line.T1 || n_rs_line.T2; // ?
 					not_ready_flag = ~(n_rs_line.valid1 && n_rs_line.valid2);

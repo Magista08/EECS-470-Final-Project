@@ -188,7 +188,7 @@ module EX (
                 1'b0,                    // csr_op
                 1'b0,                    // valid
                 FUNC_ALU,                 // FUNC_UNIT
-		{$clog2(`SQ_SIZE){1'b0}}
+		        {$clog2(`SQ_SIZE){1'b0}}
             };
         end
         for (int kk=0; kk<`NUM_FU_MULT; kk=kk+1) begin
@@ -212,7 +212,7 @@ module EX (
                 1'b0,                    // csr_op
                 1'b0,                    // valid
                 FUNC_ALU,                 // FUNC_UNIT
-		{$clog2(`SQ_SIZE){1'b0}}
+		        {$clog2(`SQ_SIZE){1'b0}}
             };
         end
 
@@ -223,18 +223,26 @@ module EX (
             if (IS_packet[i].inst != `NOP) begin // Maybe they don't want me to use NOP
 		        if (IS_packet[i].func_unit == FUNC_ALU) begin
                     ALU_input[i] = IS_packet[i];  
-$display("-------ALU--------");                  
+                    // $display("-------ALU--------");                  
                 end else if (IS_packet[i].func_unit == FUNC_MUL) begin
                     MULT_input[i] = IS_packet[i];
-$display("-------mul--------");
+                    // $display("-------mul--------");
                 end else if (IS_packet[i].func_unit == FUNC_MEM) begin
                     FU_LOAD_STORE_in[i] = IS_packet[i];
-$display("-------mem--------");
+                    // $display("-------mem--------");
                 end
             end
         end
 
     end
+
+    // always_comb begin
+    //     $display("---From EX---");
+    //     $display("DP_packet[0].NPC:%h, DP_packet[0].inst:%h, DP_packet[0].wr_en:%b DP_packet[0].rd_en:%b", DP_packet[0].NPC, DP_packet[0].inst, DP_packet[0].wr_mem, DP_packet[0].rd_mem);
+    //     $display("DP_packet[1].NPC:%h, DP_packet[1].inst:%h, DP_packet[1].wr_en:%b DP_packet[1].rd_en:%b", DP_packet[1].NPC, DP_packet[1].inst, DP_packet[1].wr_mem, DP_packet[1].rd_mem);
+    //     $display("DP_packet[2].NPC:%h, DP_packet[2].inst:%h, DP_packet[2].wr_en:%b DP_packet[2].rd_en:%b", DP_packet[2].NPC, DP_packet[2].inst, DP_packet[2].wr_mem, DP_packet[2].rd_mem);
+    //     $display("--------------------------------");
+    // end
 
     // put stuff into SQ
     LSQ lsq_0 (
@@ -479,7 +487,7 @@ module complete_buffer (
                         next_CDB_branch_taken[i] = next_buffer[j].branch_taken;
 
                         next_buffer[j].valid = 0;
-			$display("---------------------------------------------------caonnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnmmmmmmm---------------------------------------------");
+			// $display("---------------------------------------------------caonnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnmmmmmmm---------------------------------------------");
                         break;
                     end
                 end

@@ -25,6 +25,8 @@ module DEC (
     output logic          dest_reg_valid, // Whether the destination register is in used 1: in use, 0: not in use
     output FUNC_UNIT      func_unit // Which functional unit is in use
 );
+    // assign rd_mem = (valid && (inst == `RV32_LB || inst == `RV32_LH || inst == `RV32_LW || inst == `RV32_LBU || inst == `RV32_LHU));
+    // assign wr_mem = (valid && (inst == `RV32_SB || inst == `RV32_SH || inst == `RV32_SW));
 
     // Note: I recommend using an IDE's code folding feature on this block
     always_comb begin

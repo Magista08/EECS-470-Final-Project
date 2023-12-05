@@ -1,5 +1,5 @@
-`include "../sys_defs.svh"
-`include "../ISA.svh"
+`include "verilog/sys_defs.svh"
+`include "verilog/ISA.svh"
 
 module mem_pre_decoder(
     input INST inst, 

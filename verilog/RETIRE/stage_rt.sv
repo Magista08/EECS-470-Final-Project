@@ -66,12 +66,12 @@ module stage_rt(
     assign rt_lsq_packet_out[1].retire_tag  = rob_rt_packet_in[1].tag;
     assign rt_lsq_packet_out[2].retire_tag  = rob_rt_packet_in[2].tag;
 
-    assign rt_lsq_packet_out[0].valid       = (fake_halt) ? 0 : (rob_rt_packet_in[0].dest_reg_idx != `ZERO_REG)
+    assign rt_lsq_packet_out[0].valid       = (fake_halt) ? 0 : (rob_rt_packet_in[0].dest_reg_idx == `ZERO_REG)
                                             ? rob_rt_packet_in[0].valid : 0;
-    assign rt_lsq_packet_out[1].valid       = (fake_halt) ? 0 : ((rob_rt_packet_in[1].dest_reg_idx != `ZERO_REG) && 
+    assign rt_lsq_packet_out[1].valid       = (fake_halt) ? 0 : ((rob_rt_packet_in[1].dest_reg_idx == `ZERO_REG) && 
                                              ~(rob_rt_packet_in[0].valid && (rob_rt_packet_in[0].take_branch || rob_rt_packet_in[0].halt))) 
                                              ? rob_rt_packet_in[1].valid : 0;
-    assign rt_lsq_packet_out[2].valid       = (fake_halt) ? 0 : ((rob_rt_packet_in[2].dest_reg_idx != `ZERO_REG) && 
+    assign rt_lsq_packet_out[2].valid       = (fake_halt) ? 0 : ((rob_rt_packet_in[2].dest_reg_idx == `ZERO_REG) && 
                                            ~((rob_rt_packet_in[1].valid && (rob_rt_packet_in[1].take_branch || rob_rt_packet_in[1].halt)) || (rob_rt_packet_in[0].valid && (rob_rt_packet_in[0].take_branch || rob_rt_packet_in[0].halt))))
                                             ? rob_rt_packet_in[2].valid : 0;
 
@@ -105,15 +105,21 @@ module stage_rt(
     //assign n_fake_halt_npc = (fake_halt) ? fake_halt_npc : (rob_rt_packet_in[0].valid && rob_rt_packet_in[0].halt) ? rob_rt_packet_in[0].NPC : (rob_rt_packet_in[1].valid && rob_rt_packet_in[1].halt) ? rob_rt_packet_in[1].NPC : (rob_rt_packet_in[2].valid && rob_rt_packet_in[2].halt) ? rob_rt_packet_in[2].NPC : fake_halt_npc;
 
     always_ff @(posedge clock) begin
-	if(reset) begin
-	    fake_halt <= 1'b0;
-	    //fake_halt_npc <= {`XLEN{1'b0}};
-	end else begin
-	    fake_halt <= n_fake_halt;
+        if(reset) begin
+            fake_halt <= 1'b0;
+            //fake_halt_npc <= {`XLEN{1'b0}};
+        end else begin
+            fake_halt <= n_fake_halt;
 
-	
-	    //fake_halt_npc <= n_fake_halt_npc;
-	end
+
+            //fake_halt_npc <= n_fake_halt_npc;
+        end
+    end
+
+    //////////////////////////////////////////////////////////////////// DISPLAY ///////////////////////////////////////////////////////////////////////////
+    always_ff @(posedge clock) begin
+        $display("--------------------------------------------RETIRE--------------------------------------------");
+        $display("clock=%d, reset=%d, rt_busy=%d, fake_halt=%d", clock, reset, rt_busy, fake_halt);
     end
 
 endmodule

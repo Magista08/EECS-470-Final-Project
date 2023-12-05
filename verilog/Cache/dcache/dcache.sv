@@ -331,10 +331,10 @@ module DCACHE(
     assign lsq_packet_out[0].busy = n_evict_valid || (mshr_state_table[0] != INVALID && mshr_state_table[1] != INVALID && mshr_state_table[2] != INVALID && 
 					mshr_state_table[3] != INVALID);
     assign lsq_packet_out[1].busy = lsq_packet_out[0].busy;
-    assign rt_busy = (mshr_state_table[0] != INVALID && mshr_state_table[1] != INVALID && mshr_state_table[2] != INVALID && mshr_state_table[3] != INVALID) && 
-					((lsq_packet_in.valid && miss && ~lsq_packet_in.st_or_ld) || (mshr_state_table[0] == WAITING && ~mshr_table[0].st_or_ld) || 
-					(mshr_state_table[1] == WAITING && ~mshr_table[1].st_or_ld) ||
-					(mshr_state_table[2] == WAITING && ~mshr_table[2].st_or_ld) || (mshr_state_table[3] == WAITING && ~mshr_table[3].st_or_ld));
+    assign rt_busy = (mshr_state_table[0] != INVALID && mshr_state_table[1] != INVALID && mshr_state_table[2] != INVALID && mshr_state_table[3] != INVALID) || 
+					((lsq_packet_in.valid && miss && ~lsq_packet_in.st_or_ld) || ((mshr_state_table[0] == WAITING)&& ~mshr_table[0].st_or_ld) || 
+					((mshr_state_table[1] == WAITING) && ~mshr_table[1].st_or_ld) ||
+					((mshr_state_table[2] == WAITING) && ~mshr_table[2].st_or_ld) || ((mshr_state_table[3] == WAITING) && ~mshr_table[3].st_or_ld));
 
     always_ff @(posedge clock) begin
 	if(reset) begin
@@ -379,6 +379,7 @@ module DCACHE(
 	    end
 	    //$display("evict_valid:%b completed:%b state:%b income_data:%h", evict_valid, mshr_state_completed, mshr_state_table, income_data);
 	    //$display("idx0:%h idx1:%h idx2:%h idx3:%h", mshr_table[0].value[7:0], mshr_table[1].value[7:0], mshr_table[2].value[7:0], mshr_table[3].value[7:0]);
+        $display("mshr_state_table[0]:%b, mshr_state_table[1]:%b, mshr_state_table[2]:%b, mshr_state_table[3]", mshr_state_table[0], mshr_state_table[1], mshr_state_table[2], mshr_state_table[3]);
 	end
     end
 endmodule    
