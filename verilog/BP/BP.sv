@@ -220,10 +220,10 @@ module BP(
     // To Cache
     genvar bp_k;
     generate
-        assign bp_packet_out[0].inst  = if_packet_in[0].inst;
+        assign bp_packet_out[0].inst  = (!if_packet_in[0].valid) ? `NOP : if_packet_in[0].inst;
         assign bp_packet_out[0].valid = if_packet_in[0].valid && bp_packet_out[0].inst != `NOP;
         for (bp_k=1; bp_k<`N; bp_k++) begin
-            assign bp_packet_out[bp_k].inst  = bp_taken_out[bp_k-1] ? `NOP : if_packet_in[bp_k].inst;
+            assign bp_packet_out[bp_k].inst  = (!if_packet_in[bp_k].valid && bp_taken_out[bp_k-1]) ? `NOP : if_packet_in[bp_k].inst;
             assign bp_packet_out[bp_k].valid = if_packet_in[bp_k].valid && !bp_taken_out[bp_k-1] && bp_packet_out[bp_k].inst != `NOP;
         end
     endgenerate

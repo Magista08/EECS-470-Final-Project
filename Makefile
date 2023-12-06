@@ -412,7 +412,7 @@ clean: clean_exe clean_run_files
 
 # removes all extra synthesis files and the entire output directory
 # use cautiously, this can cause hours of recompiling in project 4
-nuke: clean clean_output clean_synth clean_programs
+nuke: clean clean_synth clean_programs
 	@$(call PRINT_COLOR, 6, note: nuke is split into multiple commands you can call separately: $^)
 
 clean_exe:

@@ -122,7 +122,7 @@ module pipeline (
         $display("-----------------------------------------------------------------------------------------------------------");
         $display("---------------------------------------------Pipeline-----------------------------------------------------");
         $display("instruction[1]:%h, instruciton[0]:%h", mem2proc_data[63:32], mem2proc_data[31:0]);
-        $display("squash_flag:%b, squash_pc:%h", squash_flag, squash_pc);
+        $display("squash_flag:%b, squash_pc:%h, sq_full: %b", squash_flag, squash_pc, sq_full);
         $display("---------------------------------------------ICache------------------------------------------------------");
         $display("icache_if_packet[0].inst:%h, icache_if_packet[0].valid:%b", icache_if_packet[0].inst, icache_if_packet[0].valid);
         $display("icache_if_packet[1].inst:%h, icache_if_packet[1].valid:%b", icache_if_packet[1].inst, icache_if_packet[1].valid);
@@ -149,6 +149,7 @@ module pipeline (
         //$display("dp_NPC[1]:%h dp_inst[1]:%h dp_valid[1]:%b, dp_rs1_value[1]: %d, dp_rs2_value[1]: %d", dp_packet_out[1].NPC, dp_packet_out[1].inst, ~dp_packet_out[1].illegal, dp_packet_out[1].rs1_value, dp_packet_out[0].rs2_value);
         //$display("dp_NPC[2]:%h dp_inst[2]:%h dp_valid[2]:%b, dp_rs1_value[2]: %d, dp_rs2_value[0]: %d", dp_packet_out[2].NPC, dp_packet_out[2].inst, ~dp_packet_out[2].illegal, dp_packet_out[1].rs1_value, dp_packet_out[0].rs2_value);
         $display("------------------------------------------------ISSUE--------------------------------------------------------");
+        $display("ROB_EMPTY_#: %d, RS_EMPTY_#: %d", rob_if_packet.empty_num, rs_if_packet.empty_num);
         $display("is_NPC[0]:%h is_inst[0]:%h is_valid[0]:%b is_tag[0]:%h, is_value[0].rs1_value: %h, is_value[0].rs2_value: %h, is_sq_position[0]: %b", is_NPC_dbg[0], is_inst_dbg[0], is_valid_dbg[0], is_ex_reg[0].T, is_ex_reg[0].rs1_value, is_ex_reg[0].rs2_value, is_ex_reg[0].sq_position);
         $display("is_NPC[1]:%h is_inst[1]:%h is_valid[1]:%b is_tag[1]:%h, is_value[1].rs1_value: %h, is_value[1].rs2_value: %h, is_sq_position[1]: %b", is_NPC_dbg[1], is_inst_dbg[1], is_valid_dbg[1], is_ex_reg[1].T, is_ex_reg[1].rs1_value, is_ex_reg[1].rs2_value, is_ex_reg[1].sq_position);
         $display("is_NPC[2]:%h is_inst[2]:%h is_valid[2]:%b is_tag[2]:%h, is_value[2].rs1_value: %h, is_value[2].rs2_value: %h, is_sq_position[2]: %b", is_NPC_dbg[2], is_inst_dbg[2], is_valid_dbg[2], is_ex_reg[2].T, is_ex_reg[2].rs1_value, is_ex_reg[2].rs2_value, is_ex_reg[2].sq_position);
@@ -276,12 +277,14 @@ module pipeline (
     
     insn_buffer insn_buffer0 (
 		.clock(clock),
-		.enable(~sq_full), // sq_full
+		.enable(1'b1), // sq_full
 		.reset(reset),
 		.squash_flag(squash_flag),
 		.if_packet_in(bp_ib_packet),
 		.ROB_blank_number(rob_if_packet.empty_num),
 		.RS_blank_number(rs_if_packet.empty_num),
+        .SQ_full(sq_full),
+
 		.ib_dp_packet_out(ib_dp_packet),
 		.insn_buffer_full(insn_buffer_stall)
 	);

@@ -53,9 +53,11 @@ module LSQ (
     PSEL_TABLE                                  psel_table;
     logic [`SQ_SIZE-1:0]                        req1, gnt1, req2, gnt2;
     logic                                       store_found_in_lower, load_sent_in_lower;
-    logic [7:0]                                 pre_req1, pre_req2;
+    logic [`SQ_SIZE-1:0]                        pre_req1, pre_req2;
 
-    logic [2:0] gnt1_log, gnt2_log;
+    logic [$clog2(`SQ_SIZE)-1:0]                gnt2_log_to_psel1_idx;
+
+    logic [$clog2(`SQ_SIZE)-1:0]                gnt1_log, gnt2_log;
     // always_comb begin
     //     gnt1_log = 0;
     //     gnt2_log = 0;
@@ -79,10 +81,6 @@ module LSQ (
     //     end
     // end
 
-    // Give RS tail information
-    assign SQ_tail[0] = tail[$clog2(`SQ_SIZE)-1:0];
-    assign SQ_tail[1] = tail[$clog2(`SQ_SIZE)-1:0] + (DP_packet[0].wr_mem || DP_packet[0].rd_mem);
-    assign SQ_tail[2] = tail[$clog2(`SQ_SIZE)-1:0] + (DP_packet[0].wr_mem || DP_packet[0].rd_mem) + (DP_packet[1].wr_mem || DP_packet[1].rd_mem);
 
     always_comb begin
         next_SQ = SQ;
@@ -104,7 +102,12 @@ module LSQ (
 
         end else begin // Order of the following steps may change
 
-            next_tail = tail + (~DP_packet[0].illegal && (DP_packet[0].wr_mem || DP_packet[0].rd_mem)) + (~DP_packet[1].illegal && (DP_packet[1].wr_mem || DP_packet[1].rd_mem)) + (~DP_packet[2].illegal && (DP_packet[2].wr_mem || DP_packet[2].rd_mem));
+            next_tail = tail + (DP_packet[0].wr_mem || DP_packet[0].rd_mem) + (DP_packet[1].wr_mem || DP_packet[1].rd_mem) + (DP_packet[2].wr_mem || DP_packet[2].rd_mem);
+            // $display("next_tail: %b", next_tail);
+            // $display("tail: %b", tail);
+            // $display("DP_packet[0].illegal: %b, DP_packet[0].wr_mem: %b, DP_packet[0].rd_mem: %b,", DP_packet[0].illegal, DP_packet[0].wr_mem, DP_packet[0].rd_mem);
+            // $display("DP_packet[1].illegal: %b, DP_packet[1].wr_mem: %b, DP_packet[1].rd_mem: %b,", DP_packet[1].illegal, DP_packet[1].wr_mem, DP_packet[1].rd_mem);
+            // $display("DP_packet[2].illegal: %b, DP_packet[2].wr_mem: %b, DP_packet[2].rd_mem: %b,", DP_packet[2].illegal, DP_packet[2].wr_mem, DP_packet[2].rd_mem);
 
             head_idx       = head[$clog2(`SQ_SIZE)-1:0];
             next_head_idx  = next_head[$clog2(`SQ_SIZE)-1:0];
@@ -118,6 +121,12 @@ module LSQ (
 
             // Give DP full information
             SQ_full = (next_tail_idx == next_head_idx && next_tail_flag != next_head_flag) || ((next_tail_idx+3'b001) == next_head_idx) || ((next_tail_idx+3'b010) == next_head_idx);
+            // SQ_full = (next_tail_idx >= next_head_idx && next_tail_flag != next_head_flag) || ((next_tail_idx+3'b001) == next_head_idx) || ((next_tail_idx+3'b010) == next_head_idx);
+
+            // Give RS tail information
+            SQ_tail[0] = tail[$clog2(`SQ_SIZE)-1:0];
+            SQ_tail[1] = tail[$clog2(`SQ_SIZE)-1:0] + (DP_packet[0].wr_mem || DP_packet[0].rd_mem);
+            SQ_tail[2] = tail[$clog2(`SQ_SIZE)-1:0] + (DP_packet[0].wr_mem || DP_packet[0].rd_mem) + (DP_packet[1].wr_mem || DP_packet[1].rd_mem);
 
 
             // [1.] Assign entries from DP_packet (I need to give load or store information for [5] even if they are not valid now)
@@ -136,6 +145,13 @@ module LSQ (
                 if (LOAD_STORE_input[i].valid==1) begin
                     // todo: give information according to the position
                     next_SQ[position[i]] = LOAD_STORE_input[i];
+                    // $display("position[%0d]: %b", i, position[i]);
+                    // $display("LOAD_STORE_input[%0d].tag: %b", i, LOAD_STORE_input[i].T);
+                    // $display("LOAD_STORE_input[%0d].word_addr: %b", i, LOAD_STORE_input[i].word_addr);
+                    // $display("LOAD_STORE_input[%0d].res_addr: %b", i, LOAD_STORE_input[i].res_addr);
+                    // $display("LOAD_STORE_input[%0d].value: %b", i, LOAD_STORE_input[i].value);
+                    // $display("LOAD_STORE_input[%0d].load_1_store_0: %b", i, LOAD_STORE_input[i].load_1_store_0);
+                    // $display("LOAD_STORE_input[%0d].valid: %b", i, LOAD_STORE_input[i].valid);
                 end    
             end
 
@@ -169,7 +185,7 @@ module LSQ (
                     // use psel_table.psel_2
                     if (next_tail_idx!=0) begin
                         // psel_table.psel_2 = {psel_table.psel_1[(next_tail_idx-1):0], psel_table.psel_1[(`SQ_SIZE-1):next_tail_idx]}; // concatenate
-                        psel_table.psel_2 = (psel_table.psel_1 << (`SQ_SIZE-next_tail_idx+1)) | (psel_table.psel_1 >> (next_tail_idx));
+                        psel_table.psel_2 = (psel_table.psel_1 << (`SQ_SIZE-next_tail_idx)) | (psel_table.psel_1 >> (next_tail_idx));
 
                         if (i<next_tail_idx) begin // upper case
                             for (int j=`SQ_SIZE-1; j>i+`SQ_SIZE-next_tail_idx; j=j-1) begin // new i
@@ -236,14 +252,6 @@ module LSQ (
                         end
                     end
                 end
-                // $display("[4.] next_SQ[0].addr_cannot_to_DCache: %b", next_SQ[0].addr_cannot_to_DCache);
-                // $display("[4.] next_SQ[1].addr_cannot_to_DCache: %b", next_SQ[1].addr_cannot_to_DCache);
-                // $display("[4.] next_SQ[2].addr_cannot_to_DCache: %b", next_SQ[2].addr_cannot_to_DCache);
-                // $display("[4.] next_SQ[3].addr_cannot_to_DCache: %b", next_SQ[3].addr_cannot_to_DCache);
-                // $display("[4.] next_SQ[4].addr_cannot_to_DCache: %b", next_SQ[4].addr_cannot_to_DCache);
-                // $display("[4.] next_SQ[5].addr_cannot_to_DCache: %b", next_SQ[5].addr_cannot_to_DCache);
-                // $display("[4.] next_SQ[6].addr_cannot_to_DCache: %b", next_SQ[6].addr_cannot_to_DCache);
-                // $display("[4.] next_SQ[7].addr_cannot_to_DCache: %b", next_SQ[7].addr_cannot_to_DCache);
             end
 
 
@@ -252,10 +260,8 @@ module LSQ (
             // determine pre_store_done
             psel_table = 0;
             for (int i=0; i<`SQ_SIZE; i=i+1) begin
-                // $display("[5.0] next_SQ[%0d].value: %b", i, next_SQ[i].value); 
                 if ((next_SQ[i].valid==1) && (next_SQ[i].load_1_store_0==1) && (next_SQ[i].retire_valid==0)) begin // For every load
                     next_SQ[i].pre_store_done = 1;
-                    // $display("[5.1] next_SQ[%0d].pre_store_done: %b", i, next_SQ[i].pre_store_done);
 
                     for (int j=0; j<`SQ_SIZE; j=j+1) begin
                         if (j!=i) begin
@@ -277,13 +283,12 @@ module LSQ (
                         if (psel_table.psel_1!={`SQ_SIZE{1'b0}}) begin
                             next_SQ[i].pre_store_done = 0;
                         end
-                        // $display("[5.2] next_SQ[%0d].pre_store_done: %b", i, next_SQ[i].pre_store_done);
 
                     end else begin // h and t in different circles
                         // use psel_table.psel_2
                         if (next_tail_idx!=0) begin
                             // psel_table.psel_2 = {psel_table.psel_1[(next_tail_idx-1):0], psel_table.psel_1[(`SQ_SIZE-1):next_tail_idx]}; // concatenate
-                            psel_table.psel_2 = (psel_table.psel_1 << (`SQ_SIZE-next_tail_idx+1)) | (psel_table.psel_1 >> (next_tail_idx));
+                            psel_table.psel_2 = (psel_table.psel_1 << (`SQ_SIZE-next_tail_idx)) | (psel_table.psel_1 >> (next_tail_idx));
 
                             if (i<next_tail_idx) begin // upper case
                                 for (int j=`SQ_SIZE-1; j>i+`SQ_SIZE-next_tail_idx; j=j-1) begin // new i
@@ -318,8 +323,7 @@ module LSQ (
                         // end
                         if (psel_table.psel_2!={`SQ_SIZE{1'b0}}) begin
                             next_SQ[i].pre_store_done = 0;
-                        end
-                        // $display("[5.3] next_SQ[%0d].pre_store_done: %b", i, next_SQ[i].pre_store_done);                
+                        end               
                     end
 
 
@@ -330,11 +334,8 @@ module LSQ (
                         for (int j=0; j<`SQ_SIZE; j=j+1) begin
                             if (j!=i) begin
                                 psel_table.psel_1[j] = (next_SQ[j].load_1_store_0==0) && (next_SQ[j].valid==1) && (next_SQ[j].mem_size[1:0]==next_SQ[i].mem_size[1:0]) && (next_SQ[j].word_addr==next_SQ[i].word_addr) && (next_SQ[j].res_addr==next_SQ[i].res_addr);
-                                // $display("[5.34]");
-                                // $display("[5.34] psel_table.psel_1[%0d]: %b", j, psel_table.psel_1[j]);
                             end
                         end
-
                         if(next_head_flag==next_tail_flag) begin // h and t in the same circle
                             for (int j=`SQ_SIZE-1; j>i; j=j-1) begin
                                 psel_table.psel_1[j] = 0;
@@ -368,32 +369,28 @@ module LSQ (
                             //     pre_req1[i] = req1[i] | pre_req1[i-1];
                             // end
 
-                            // $display("[5.344] gnt1: %0d", gnt1);
                             // if(gnt1 != 0) begin
                             //     next_SQ[i].value = next_SQ[gnt1_log].value; // forwarding here
-                            //     // $display("[5.345] gnt1: %0d", gnt1);
-                            //     // $display("[5.345] gnt1_log: %0d", gnt1_log); 
-                            //     // $display("[5.345] next_SQ[%0d].value: %b", gnt1_log, next_SQ[gnt1_log].value);                           
+                            //     $display("[5.345] gnt1: %0d", gnt1);
+                            //     $display("[5.345] gnt1_log: %0d", gnt1_log); 
+                            //     $display("[5.345] next_SQ[%0d].value: %b", gnt1_log, next_SQ[gnt1_log].value);                           
                             // end
 
                             if(gnt1 != 0) begin    
                             //if(gnt1_log != 0) begin
                                 next_SQ[i].value = next_SQ[gnt1_log].value; // forwarding here
-                                // $display("[5.345] gnt1: %0d", gnt1);
-                                // $display("[5.345] gnt1_log: %0d", gnt1_log); 
-                                // $display("[5.345] next_SQ[%0d].value: %b", gnt1_log, next_SQ[gnt1_log].value);  
+                                $display("h and t in the same circle, forwarding done!");
+                                $display("next_SQ[%0d].value: %b  next_SQ[%0d].value: %b", i, next_SQ[i].value, gnt1_log, next_SQ[gnt1_log].value);
                                 next_SQ[i].retire_valid = 1;
                             end else begin
                                 next_SQ[i].retire_valid = 0;
                             end
-                        // $display("[5.35] next_SQ[%0d].value: %b", i, next_SQ[i].value);
-                        // $display("[5.35] next_SQ[%0d].retire_valid: %b", i, next_SQ[i].retire_valid);
 
                         end else begin // h and t in different circles
                             // use psel_table.psel_2
                             if (next_tail_idx!=0) begin
                                 // psel_table.psel_2 = {psel_table.psel_1[(next_tail_idx-1):0], psel_table.psel_1[(`SQ_SIZE-1):next_tail_idx]}; // concatenate
-                                psel_table.psel_2 = (psel_table.psel_1 << (`SQ_SIZE-next_tail_idx+1)) | (psel_table.psel_1 >> (next_tail_idx));
+                                psel_table.psel_2 = (psel_table.psel_1 << (`SQ_SIZE-next_tail_idx)) | (psel_table.psel_1 >> (next_tail_idx));
 
                                 if (i<next_tail_idx) begin // upper case
                                     for (int j=`SQ_SIZE-1; j>i+`SQ_SIZE-next_tail_idx; j=j-1) begin // new i
@@ -453,21 +450,35 @@ module LSQ (
                             // if(gnt2 != 0) begin
                             //     next_SQ[i].value = next_SQ[gnt2_log].value; // forwarding here
                             // end
+
+
+                            if ((`SQ_SIZE-gnt2_log) <= next_tail_idx) begin // gnt2_log in upper range in psel_1
+                                gnt2_log_to_psel1_idx = gnt2_log + next_tail_idx - `SQ_SIZE;
+                            end else begin // gnt2_log in lower range in psel_1
+                                gnt2_log_to_psel1_idx = gnt2_log + next_tail_idx;
+                            end
+
+
+
+
+
+
+
                             if(gnt2 != 0) begin
                             //if(gnt2_log != 0) begin
-                                next_SQ[i].value = next_SQ[gnt2_log].value; // forwarding here
+                               
+
+                                next_SQ[i].value = next_SQ[gnt2_log_to_psel1_idx].value; // forwarding here
+                                $display("h and t in the different circle, forwarding done!");
+                                $display("next_SQ[%0d].value: %b  next_SQ[%0d].value: %b", i, next_SQ[i].value, gnt2_log_to_psel1_idx, next_SQ[gnt2_log_to_psel1_idx].value);
                                 next_SQ[i].retire_valid = 1;
+                                // $display("[5.356] gnt2_log: %0d", gnt2_log);
+                                // $display("[5.356] next_SQ[%0d].value: %b  next_SQ[%0d].value: %b", i, next_SQ[i].value, gnt2_log, next_SQ[gnt2_log].value);
                             end else begin
                                 next_SQ[i].retire_valid = 0;
                             end       
-                            // $display("[5.36] next_SQ[%0d].value: %b", i, next_SQ[i].value);
-                            // $display("[5.36] next_SQ[%0d].retire_valid: %b", i, next_SQ[i].retire_valid);
 
                         end
-                        // $display("[5.4] Forwarding done!");
-                        // $display("[5.4] next_SQ[%0d].pre_store_done: %b", i, next_SQ[i].pre_store_done);
-                        // $display("[5.4] next_SQ[%0d].retire_valid: %b", i, next_SQ[i].retire_valid);
-                        // $display("[5.4] next_SQ[%0d].value: %b", i, next_SQ[i].value);
 
                         // get data from DCache or send data to DCache
                         if (next_SQ[i].retire_valid==0) begin
@@ -479,7 +490,7 @@ module LSQ (
                                 next_SQ[i].value = DC_SQ_packet[1].value;
                                 next_SQ[i].retire_valid = 1;
 
-                            end else if ((to_DC_full==0) && ((DC_SQ_packet[0].busy==0) && (DC_SQ_packet[1].busy==0) && (next_SQ[i].addr_cannot_to_DCache==0))) begin                                           
+                            end else if ((next_SQ[i].load_sent_to_DCache==0) && (to_DC_full==0) && ((DC_SQ_packet[0].busy==0) && (DC_SQ_packet[1].busy==0) && (next_SQ[i].addr_cannot_to_DCache==0))) begin                                           
                                 next_SQ_DC_packet.valid = 1;
                                 next_SQ_DC_packet.address = {next_SQ[i].word_addr, next_SQ[i].res_addr};
                                 next_SQ_DC_packet.value = 0; // should be useless
@@ -487,12 +498,10 @@ module LSQ (
                                 next_SQ_DC_packet.mem_size = next_SQ[i].mem_size[1:0];
                                 next_SQ_DC_packet.NPC = next_SQ[i].NPC;
 
+                               
                                 to_DC_full = 1;
-
-                                // $display("[5.5] load_send_to_DCache");
-                                // $display("[5.5] next_head_idx: %b", next_head_idx);
-                                // $display("[5.5] next_SQ_DC_packet.address: %b", next_SQ_DC_packet.address);
-                                // $display("[5.5] next_SQ_DC_packet.value: %b", next_SQ_DC_packet.value);
+                                next_SQ[i].load_sent_to_DCache = 1;
+                                
                             end
                         end
                     end
@@ -506,7 +515,7 @@ module LSQ (
                     if (i>=next_head_idx && i<next_tail_idx) begin
                         if ((next_SQ[i].valid==1) && (next_SQ[i].load_1_store_0==1) && (next_SQ[i].retire_valid==1) && (next_SQ[i].sent_to_CompBuff==0) && (LSQ_buffer_busy==0)) begin
                             next_SQ_COMP_packet.T = next_SQ[i].T;
-                            next_SQ_COMP_packet.value = DC_SQ_packet[0].value;
+                            next_SQ_COMP_packet.value = next_SQ[i].value;
                             next_SQ_COMP_packet.valid = next_SQ[i].valid;
                             next_SQ_COMP_packet.branch_taken = 0;
                             next_SQ_COMP_packet.NPC = next_SQ[i].NPC;
@@ -523,7 +532,7 @@ module LSQ (
                     if (i>=next_head_idx && i<`SQ_SIZE) begin
                         if ((next_SQ[i].valid==1) && (next_SQ[i].load_1_store_0==1) && (next_SQ[i].retire_valid==1) && (next_SQ[i].sent_to_CompBuff==0) && (LSQ_buffer_busy==0)) begin
                             next_SQ_COMP_packet.T = next_SQ[i].T;
-                            next_SQ_COMP_packet.value = DC_SQ_packet[0].value;
+                            next_SQ_COMP_packet.value = next_SQ[i].value;
                             next_SQ_COMP_packet.valid = next_SQ[i].valid;
                             next_SQ_COMP_packet.branch_taken = 0;
                             next_SQ_COMP_packet.NPC = next_SQ[i].NPC;
@@ -539,7 +548,7 @@ module LSQ (
                     for (int i=0; i<next_tail_idx; i=i+1) begin
                         if ((next_SQ[i].valid==1) && (next_SQ[i].load_1_store_0==1) && (next_SQ[i].retire_valid==1) && (next_SQ[i].sent_to_CompBuff==0) && (LSQ_buffer_busy==0)) begin
                             next_SQ_COMP_packet.T = next_SQ[i].T;
-                            next_SQ_COMP_packet.value = DC_SQ_packet[0].value;
+                            next_SQ_COMP_packet.value = next_SQ[i].value;
                             next_SQ_COMP_packet.valid = next_SQ[i].valid;
                             next_SQ_COMP_packet.branch_taken = 0;
                             next_SQ_COMP_packet.NPC = next_SQ[i].NPC;
@@ -557,16 +566,9 @@ module LSQ (
             for (int i=0; i<3; i=i+1) begin
                 if ((next_SQ[next_head_idx].valid==1) && (RT_packet[i].retire_tag==next_SQ[next_head_idx].T) && (RT_packet[i].valid==1)) begin//RT_packet[i].valid==1
                     next_SQ[next_head_idx].retire_valid = 1;
-                    // $display("[7.] next_head_idx: %b", next_head_idx);
-                    // $display("[7.] next_SQ[%0d].valid: %b", next_head_idx, next_SQ[next_head_idx].valid);
-                    // $display("[7.] RT_packet[%0d].retire_tag: %b", i, RT_packet[i].retire_tag);
-                    // $display("[7.] next_SQ[%0d].T: %b", next_head_idx, next_SQ[next_head_idx].T);
-                    // $display("[7.] RT_packet[%0d].valid: %b", i, RT_packet[i].valid);
-                    // $display("[7.] next_SQ[%0d].retire_valid: %b", next_head_idx, next_SQ[next_head_idx].retire_valid);
                     break;
                 end
             end
-
 
             // [8.] Retire the head (the DCache can only have 1 input in our design, and we also need to consider the previous load in [5])
             if ((next_SQ[next_head_idx].valid==1) && (next_SQ[next_head_idx].load_1_store_0==0) && (next_SQ[next_head_idx].retire_valid==1) && (to_DC_full==0) && (DC_SQ_packet[0].busy==0) && (DC_SQ_packet[1].busy==0) && (next_SQ[next_head_idx].addr_cannot_to_DCache==0)) begin
@@ -577,32 +579,19 @@ module LSQ (
                 next_SQ_DC_packet.mem_size = next_SQ[next_head_idx].mem_size[1:0];
                 next_SQ_DC_packet.NPC = next_SQ[next_head_idx].NPC;
 
-                // $display("[8.] store_send_to_DCache");
-                // $display("[8.] next_head_idx: %b", next_head_idx);
-                // $display("[8.] next_SQ_DC_packet.address: %b", next_SQ_DC_packet.address);
-                // $display("[8.] next_SQ_DC_packet.value: %b", next_SQ_DC_packet.value);
-                // $display("----------------------------lao zi yao xia ban--------------------------------------------------");
 
                 // Free the retired store
                 next_SQ[next_head_idx] = 0;
                 next_head = head + 1;
-                // $display("[8.] store_retired");
-                // $display("[8.] next_head_idx: %b", next_head_idx);
-                // $display("[8.] next_head: %b", next_head);
-                // $display("[8.] head: %b", head);
 
             end else if ((next_SQ[next_head_idx].valid==1) && (next_SQ[next_head_idx].load_1_store_0==1) && (next_SQ[next_head_idx].retire_valid==1) && (next_SQ[next_head_idx].sent_to_CompBuff==1)) begin
                 // Free the retired load (here I "retire" the load earliar because of design of [3][4])
                 // Also, we should have sent the first retire_valid load to Buffer so we can retire safely
                 next_SQ[next_head_idx] = 0;
                 next_head = head + 1;
-                // $display("[8.] load_retired");
-                // $display("[8.] next_head_idx: %b", next_head_idx);
-                // $display("[8.] next_head: %b", next_head);
-                // $display("[8.] head: %b", head);
             end
+                to_DC_full = 0;
         end  
-        to_DC_full = 0;
     end
 
 
@@ -615,6 +604,21 @@ module LSQ (
     //     .req(req2),
     //     .gnt(gnt2)
     // );
+
+    // always_ff @(posedge clock) begin
+    //     for (int i=0; i<3; i=i+1) begin
+    //         if (LOAD_STORE_input[i].valid==1) begin
+    //             // todo: give information according to the position
+    //             $display("position[%0d]: %b", i, position[i]);
+    //             $display("LOAD_STORE_input[%0d].tag: %b", i, LOAD_STORE_input[i].T);
+    //             $display("LOAD_STORE_input[%0d].word_addr: %b", i, LOAD_STORE_input[i].word_addr);
+    //             $display("LOAD_STORE_input[%0d].res_addr: %b", i, LOAD_STORE_input[i].res_addr);
+    //             $display("LOAD_STORE_input[%0d].value: %b", i, LOAD_STORE_input[i].value);
+    //             $display("LOAD_STORE_input[%0d].load_1_store_0: %b", i, LOAD_STORE_input[i].load_1_store_0);
+    //             $display("LOAD_STORE_input[%0d].valid: %b", i, LOAD_STORE_input[i].valid);
+    //         end    
+    //     end
+    // end
 
 
     always_ff @(posedge clock) begin
@@ -634,32 +638,6 @@ module LSQ (
         end
     end
 
-    //////////////////////////////////////////////////////////////////// DISPLAY ///////////////////////////////////////////////////////////////////////////
-    always_ff @(posedge clock) begin
-        if (!reset) begin
-            $display("----------------------------FLU------------------------------------");
-            // LSQ 2 DCache
-            $display("next_SQ_DC_packet.valid: %b", next_SQ_DC_packet.valid);
-            $display("next_SQ_DC_packet.address: %h", next_SQ_DC_packet.address);
-            $display("next_SQ_DC_packet.value: %h", next_SQ_DC_packet.value);
-            $display("next_SQ_DC_packet.st_or_ld: %b", next_SQ_DC_packet.st_or_ld);
-            $display("next_SQ_DC_packet.mem_size: %h", next_SQ_DC_packet.mem_size);
-            $display("next_SQ_DC_packet.NPC: %h", next_SQ_DC_packet.NPC);
-
-            // $display("next_head_idx: %b", next_head_idx);
-            // $display("next_tail_idx: %b", next_tail_idx);
-            // $display("next_SQ[next_head_idx].valid: %b", next_SQ[next_head_idx].valid);
-            // $display("next_SQ[next_head_idx].load_1_store_0: %b", next_SQ[next_head_idx].load_1_store_0);
-            // $display("next_SQ[next_head_idx].retire_valid: %b", next_SQ[next_head_idx].retire_valid);
-            // $display("next_SQ[next_head_idx].addr_cannot_to_DCache: %b", next_SQ[next_head_idx].addr_cannot_to_DCache);
-            // $display();
-            // $display("next_SQ[next_head_idx].valid: %b", next_SQ[next_head_idx].valid);
-            // $display("next_SQ[next_head_idx].tag: %h", next_SQ[next_head_idx].T);
-            // $display("RT_packet[0].retire_tag: %h", RT_packet[0].retire_tag);
-            // $display("RT_packet[0].valid: %b", RT_packet[0].valid);
-            $display("--------------------------------------------------------------------");
-        end
-    end
 endmodule
 
 

@@ -7,6 +7,8 @@ module insn_buffer(
 	input IF_ID_PACKET [2:0] if_packet_in,
 	input [1:0] ROB_blank_number, // blank number in ROB
 	input [1:0] RS_blank_number, // blank number in reservation station
+	input       SQ_full,
+
 
 	output logic insn_buffer_full,
 	output IF_ID_PACKET [2:0] ib_dp_packet_out,
@@ -92,14 +94,16 @@ always_comb begin
 		n_rptr = rptr + 2;
 	end else if(dp_packet_count == 2'b11) begin
 		n_rptr = rptr + 3;
-	end else begin 
+	end else if(SQ_full) begin 
+		n_rptr = rptr;
+	end else begin
 		n_rptr = rptr;
 	end
 end
 
 
 always_comb begin
-	if((reset || dp_packet_count == 2'b00) && enable) begin
+	if((reset || dp_packet_count == 2'b00) && enable && SQ_full) begin
 		ib_dp_packet_out[0].inst  =  `NOP;
 		ib_dp_packet_out[0].PC    =  0;
 		ib_dp_packet_out[0].NPC   =  0;

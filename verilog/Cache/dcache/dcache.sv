@@ -381,5 +381,14 @@ module DCACHE(
 	    //$display("idx0:%h idx1:%h idx2:%h idx3:%h", mshr_table[0].value[7:0], mshr_table[1].value[7:0], mshr_table[2].value[7:0], mshr_table[3].value[7:0]);
         $display("mshr_state_table[0]:%b, mshr_state_table[1]:%b, mshr_state_table[2]:%b, mshr_state_table[3]", mshr_state_table[0], mshr_state_table[1], mshr_state_table[2], mshr_state_table[3]);
 	end
+	if(lsq_packet_in.valid) begin
+		$display("sendtoDmem addr:%h value:%h st_or_ld:%b", lsq_packet_in.address, lsq_packet_in.value, lsq_packet_in.st_or_ld);
+	end
+	if(lsq_packet_out[0].valid) begin
+		$display("sendtoLSQ value[0]:%h", lsq_packet_out[0].value);
+	end
+	if(lsq_packet_out[1].valid) begin
+		$display("sendtoLSQ value[1]:%h", lsq_packet_out[1].value);
     end
+	end
 endmodule    

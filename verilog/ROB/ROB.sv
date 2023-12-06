@@ -275,11 +275,12 @@ module ROB (
             head         <=  0;
             tail         <=  0;
         //end else if (enable) begin
-	end begin
+		end else begin
             rob_table     <= rob_table_n;
             head         <=  head_n;
             tail         <=  tail_n;
         end
+		$display("count:%h",count);
     end
 
 

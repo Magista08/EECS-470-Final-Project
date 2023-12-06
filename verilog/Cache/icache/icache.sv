@@ -57,10 +57,10 @@ module icache_2way (
 
     wire changed_addr = (current_index != last_index) || (current_tag != last_tag);
 
-    wire update_mem_tag = changed_addr || miss_outstanding || got_mem_data;
+    wire update_mem_tag = (changed_addr || miss_outstanding || got_mem_data) && (!Dcache_on_bus);
 
     wire unanswered_miss = changed_addr ? !Icache_valid_out
-                                        : miss_outstanding && (Imem2proc_response == 0);
+                                        : (Dcache_on_bus)? miss_outstanding :miss_outstanding && (Imem2proc_response == 0);
 
     assign proc2Imem_command = reset ? BUS_NONE : (miss_outstanding && !changed_addr && !Dcache_on_bus) ? BUS_LOAD : BUS_NONE;
     assign proc2Imem_addr    = (!reset)? {proc2Icache_addr[31:3],3'b0} : {proc2Icache_addr[31:3],3'b1};
@@ -84,9 +84,11 @@ module icache_2way (
                 icache_data[current_index].data  <= Imem2proc_data;
                 icache_data[current_index].tags  <= current_tag;
                 icache_data[current_index].valid <= 1;
+		current_mem_tag                  <= 0;
 				
             end
         end
+	$display("Dcache_busy:%b Icache_command:%b miss_outstanding:%b changed_addr:%b Imem2proc_response:%b Icache_valid_out:%b, got_mem_data%b current_mem_tag:%b current_index:%b icache_data[current_index].data:%h icache_data[current_index].valid:%b", Dcache_on_bus, proc2Imem_command, miss_outstanding, changed_addr, Imem2proc_response, Icache_valid_out, got_mem_data, current_mem_tag, current_index, icache_data[current_index].data, icache_data[current_index].valid);
 		// $display("current_mem_tag:%b", current_mem_tag);
 		// $display("Icache_valid_out:%b", Icache_valid_out);
 		// $display("current_tag:%b", current_tag);

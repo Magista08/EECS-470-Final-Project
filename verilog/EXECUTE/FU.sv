@@ -481,6 +481,8 @@ module FU_LOAD_STORE (
     assign next_FU_LOAD_STORE_out.sent_to_CompBuff = 0;
     assign next_FU_LOAD_STORE_out.NPC              = fu_input.NPC;
     assign next_FU_LOAD_STORE_out.halt             = fu_input.halt;
+    assign next_FU_LOAD_STORE_out.load_sent_to_DCache = 0;
+    assign next_FU_LOAD_STORE_out.addr_cannot_to_DCache = 0;
 
     // second output
     assign next_sq_position = fu_input.sq_position;

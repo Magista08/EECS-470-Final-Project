@@ -672,6 +672,7 @@ logic [`XLEN-1:2]              word_addr;
     logic                          pre_store_done;
     logic                          sent_to_CompBuff;
     logic                          addr_cannot_to_DCache;
+    logic                          load_sent_to_DCache;
 
     // just pass through
     logic [`XLEN-1:0]              NPC;

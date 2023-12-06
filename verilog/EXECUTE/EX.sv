@@ -100,6 +100,11 @@ module EX (
     logic [`NUM_FU_MEM-1:0] [$clog2(`ROBLEN)-1:0]         ST_tag;
 
 
+    logic [`XLEN-1:0] ld_in_num;
+    logic [`XLEN-1:0] st_in_num;
+    logic [`XLEN-1:0] n_ld_in_num;
+    logic [`XLEN-1:0] n_st_in_num;
+
     // generate FU's
     genvar a;
     generate
@@ -216,8 +221,35 @@ module EX (
             };
         end
 
+        for (int mem_i=0; mem_i<`NUM_FU_MEM; mem_i=mem_i+1) begin
+            FU_LOAD_STORE_in[mem_i] = {
+                {$clog2(`ROBLEN){1'b0}}, // T
+                `NOP,                    // inst
+                {`XLEN{1'b0}},           // PC
+                {`XLEN{1'b0}},           // NPC
+                {`XLEN{1'b0}},           // RS1_value
+                {`XLEN{1'b0}},           // RS2_value
+                OPA_IS_RS1,              // OPA_SELECT
+                OPB_IS_RS2,              // OPB_SELECT
+                `ZERO_REG,               // dest_reg_idx
+                ALU_ADD,                 // alu_func
+                1'b0,                    // rd_mem
+                1'b0,                    // wr_mem
+                1'b0,                    // cond_branch
+                1'b0,                    // uncond_branch
+                1'b0,                    // halt
+                1'b0,                    // illegal
+                1'b0,                    // csr_op
+                1'b0,                    // valid
+                FUNC_ALU,                 // FUNC_UNIT
+		        {$clog2(`SQ_SIZE){1'b0}}
+            };
+        end
+
         // They will never be busy so...
         // So I assign each way an FU (How can I add more FU's ?)
+        n_ld_in_num = ld_in_num;
+	n_st_in_num = st_in_num;
         for (int i=0; i<3; i=i+1) begin
             // if (IS_packet[i].illegal == 0) begin // change to nop?
             if (IS_packet[i].inst != `NOP) begin // Maybe they don't want me to use NOP
@@ -229,6 +261,12 @@ module EX (
                     // $display("-------mul--------");
                 end else if (IS_packet[i].func_unit == FUNC_MEM) begin
                     FU_LOAD_STORE_in[i] = IS_packet[i];
+		    if(IS_packet[i].rd_mem == 1) begin
+			n_ld_in_num = n_ld_in_num+1;
+		    end 
+		    if(IS_packet[i].wr_mem == 1) begin
+			n_st_in_num = n_st_in_num+1;
+		    end
                     // $display("-------mem--------");
                 end
             end
@@ -346,6 +384,18 @@ module EX (
     assign EX_packet[1].halt = CDB_halt[1];
     assign EX_packet[2].halt = CDB_halt[2];
 
+
+    always_ff @(posedge clock) begin
+	if(reset) begin
+		ld_in_num <= 0;
+	  	st_in_num <= 0;
+	end else begin
+		ld_in_num <= n_ld_in_num;
+		st_in_num <= n_st_in_num;
+	end
+	$display("ld_in_num:%h st_in_num:%h", ld_in_num, st_in_num);
+    end
+
 endmodule
 
 
@@ -407,6 +457,10 @@ module complete_buffer (
     always_ff @(posedge clock) begin
         $display("buffer_halt: %b", buffer_halt);
     end
+	logic [`XLEN-1:0] ld_out_num;
+    logic [`XLEN-1:0] st_out_num;
+    logic [`XLEN-1:0] n_ld_out_num;
+    logic [`XLEN-1:0] n_st_out_num;
 
     // assign function unit outputs to the buffer
     always_comb begin
@@ -453,6 +507,8 @@ module complete_buffer (
 			        $display("--------ALU------------");
                 end
             end
+		n_ld_out_num = ld_out_num;
+		n_st_out_num = st_out_num;
             // LSQ stuff (3 ST for retire and 1 for LD)
             for (int k=0; k<`NUM_FU_MEM; k=k+1) begin
                 if (ST_result_ready[k] && ~next_buffer[k+`NUM_FU_MULT+`NUM_FU_ALU].valid) begin
@@ -462,7 +518,8 @@ module complete_buffer (
                     next_buffer[k+`NUM_FU_MULT+`NUM_FU_ALU].value = ST_result[k];
                     next_buffer[k+`NUM_FU_MULT+`NUM_FU_ALU].valid = 1;
                     next_buffer[k+`NUM_FU_MULT+`NUM_FU_ALU].branch_taken = 0;
-                    $display("--------STfromFU------------");
+		n_st_out_num = n_st_out_num + 1;
+                    //$display("--------STfromFU------------");
                 end
             end
             if (SQ_COMP_packet.valid && ~next_buffer[`NUM_FU_MULT+`NUM_FU_ALU+`NUM_FU_MEM].valid) begin
@@ -472,7 +529,8 @@ module complete_buffer (
                 next_buffer[`NUM_FU_MULT+`NUM_FU_ALU+`NUM_FU_MEM].value = SQ_COMP_packet.value;
                 next_buffer[`NUM_FU_MULT+`NUM_FU_ALU+`NUM_FU_MEM].valid = 1;
                 next_buffer[`NUM_FU_MULT+`NUM_FU_ALU+`NUM_FU_MEM].branch_taken = 0;
-		        $display("--------LDfromLSQ------------");
+		n_ld_out_num = n_ld_out_num + 1;
+		        //$display("--------LDfromLSQ------------");
             end
 
             // give information to next CDB and set buffer not valid
@@ -519,6 +577,8 @@ module complete_buffer (
             CDB_value <= 0;
             CDB_valid <= 0;
             CDB_branch_taken <= 0;
+	    ld_out_num <= 0;
+	    st_out_num <= 0;
         end
         else begin
             buffer <= next_buffer;
@@ -529,7 +589,10 @@ module complete_buffer (
             CDB_valid <= next_CDB_valid;
 	        // $display("------next_CDB_valid:%b---------", next_CDB_valid);
             CDB_branch_taken <= next_CDB_branch_taken;
+	    ld_out_num <= n_ld_out_num;
+	    st_out_num <= n_st_out_num;
         end
+	$display("ld_out_num:%h st_out_num:%h", ld_out_num, st_out_num);
     end 
 
 endmodule
