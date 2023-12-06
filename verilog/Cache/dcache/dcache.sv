@@ -185,7 +185,7 @@ module DCACHE(
 	    n_mshr_table[k].st_or_ld = mshr_table[k].st_or_ld;
 	    n_mshr_table[k].ptr = mshr_table[k].ptr;
 	    n_mshr_table[k].mem_size = mshr_table[k].mem_size;
-	    n_mshr_table[k].NPC = mshr_table[k].NPC;
+	    n_mshr_table[k].T = mshr_table[k].T;
 	    n_mshr_table[k].in_value = mshr_table[k].in_value;
 	end
 	if(lsq_packet_in.valid && (miss && ~mshr_state_completed_match)) begin
@@ -197,7 +197,7 @@ module DCACHE(
 		    n_mshr_table[j].st_or_ld = lsq_packet_in.st_or_ld;
 		    n_mshr_table[j].ptr = (mem_req) ? dcache_table[in_idx].last_ptr : mshr_table[mshr_last_match].ptr;
 		    n_mshr_table[j].mem_size = lsq_packet_in.mem_size;
-		    n_mshr_table[j].NPC = lsq_packet_in.NPC;
+		    n_mshr_table[j].T = lsq_packet_in.T;
 		    n_mshr_table[j].in_value = lsq_packet_in.value;
 		end
 	    end
@@ -233,7 +233,7 @@ module DCACHE(
 	if(lsq_packet_in.valid && ~miss) begin
 	    lsq_packet_out[0].valid = 1;
 	    lsq_packet_out[0].address = lsq_packet_in.address;
-	    lsq_packet_out[0].NPC = lsq_packet_in.NPC;
+	    lsq_packet_out[0].T = lsq_packet_in.T;
 	    lsq_packet_out[0].st_or_ld = lsq_packet_in.st_or_ld;
 	    case(lsq_packet_in.mem_size)
 		BYTE: begin
@@ -251,7 +251,7 @@ module DCACHE(
  	end else if(lsq_packet_in.valid && mshr_state_completed_match) begin
 		lsq_packet_out[0].valid = 1;
 	    	lsq_packet_out[0].address = lsq_packet_in.address;
-		lsq_packet_out[0].NPC = lsq_packet_in.NPC;
+		lsq_packet_out[0].T = lsq_packet_in.T;
 		lsq_packet_out[0].st_or_ld = lsq_packet_in.st_or_ld;
 	    	case(lsq_packet_in.mem_size)
 		    BYTE: begin
@@ -275,7 +275,7 @@ module DCACHE(
 	    lsq_packet_out[0].valid = 0;
 	    lsq_packet_out[0].address = 0;
 	    lsq_packet_out[0].value = 0;
-	    lsq_packet_out[0].NPC = 0;
+	    lsq_packet_out[0].T = 0;
 	    lsq_packet_out[0].st_or_ld = 0;
 	end
     end
@@ -284,13 +284,13 @@ module DCACHE(
 	lsq_packet_out[1].valid = 0;
 	lsq_packet_out[1].address = 0;
 	lsq_packet_out[1].value = 0;
-	lsq_packet_out[1].NPC = 0;
+	lsq_packet_out[1].T = 0;
 	lsq_packet_out[1].st_or_ld = 0;
 	for(int n=0; n<4; n++) begin
 	    if(masked_ready[n]) begin
 		lsq_packet_out[1].valid = 1;
 	        lsq_packet_out[1].address = {mshr_table[n].tag, mshr_table[n].idx, mshr_table[n].bo};
-		lsq_packet_out[1].NPC = mshr_table[n].NPC;
+		lsq_packet_out[1].T = mshr_table[n].T;
 		lsq_packet_out[1].st_or_ld = mshr_table[n].st_or_ld;
 	        case(mshr_table[n].mem_size)
 		    BYTE: begin

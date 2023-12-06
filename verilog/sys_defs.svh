@@ -26,7 +26,7 @@
 // sizes
 `define ROBLEN 32
 `define RSLEN 16
-`define SQ_SIZE 8
+`define SQ_SIZE 32
 //`define PHYS_REG_SZ (32 + `ROB_SZ)
 
 // Internal macros, no other file should need these
@@ -644,7 +644,8 @@ typedef struct packed{
 typedef struct packed {
     logic [`NUM_FU_ALU-1:0]        ALU_empty;
     logic [`NUM_FU_MULT-1:0]       MULT_empty;
-    logic                          MEM_empty;
+    logic [`NUM_FU_MEM-1:0]        MEM_empty;
+    logic                          LSQ_empty;
 } FU_EMPTY_PACKET;
 
 
@@ -695,7 +696,7 @@ typedef struct packed {
     logic [`XLEN-1:0] value;//ST
     logic st_or_ld;//ST=0, LD=1
     MEM_SIZE          mem_size;
-    logic [`XLEN-1:0] NPC;
+    logic [$clog2(`ROBLEN)-1:0]    T;
 } LSQ_DCACHE_PACKET;
 
 typedef struct packed {
@@ -704,7 +705,7 @@ typedef struct packed {
     logic valid;//load value is valid
     logic [`XLEN-1:0] value;//LD
     logic [`XLEN-1:0] address;
-    logic [`XLEN-1:0] NPC;
+    logic [$clog2(`ROBLEN)-1:0]    T;
     logic st_or_ld;
 } DCACHE_LSQ_PACKET;
 
@@ -730,7 +731,7 @@ typedef struct packed {
     MEM_SIZE          mem_size;  
     //logic [3:0] response;
     logic ptr;
-    logic [`XLEN-1:0] NPC;
+    logic [$clog2(`ROBLEN)-1:0] T;
     logic [`XLEN-1:0] in_value;
 } MSHR_LINE;
 

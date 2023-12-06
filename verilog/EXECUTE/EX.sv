@@ -324,6 +324,7 @@ module EX (
     assign FU_empty_packet.ALU_empty = ~(ALU_buffer_busy);
     assign FU_empty_packet.MULT_empty = ~(MULT_buffer_busy);
     assign FU_empty_packet.MEM_empty = ~(MEM_buffer_busy);
+    assign FU_empty_packet.LSQ_empty = ~(LSQ_buffer_busy);
 
     // put stuff into EX_packet
     complete_buffer complete_buffer_0 (

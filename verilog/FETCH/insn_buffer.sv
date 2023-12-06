@@ -39,9 +39,9 @@ assign if_packet_size = n_wptr - wptr;
 // find how many insns in the buffer are ready
 assign ready_insn_size = (rptr > wptr)? 5'b11111-rptr+wptr+1 : wptr - rptr;
 // how many packet can i send to dispatch
-assign m = (ready_insn_size <= ROB_blank_number)? ready_insn_size : ROB_blank_number;
-assign n = (ready_insn_size <= RS_blank_number)? ready_insn_size : RS_blank_number;
-assign dp_packet_count = (m<=n) ? m : n;
+assign m = SQ_full? 0 : (ready_insn_size <= ROB_blank_number)? ready_insn_size : ROB_blank_number;
+assign n = SQ_full? 0 : (ready_insn_size <= RS_blank_number)? ready_insn_size : RS_blank_number;
+assign dp_packet_count = SQ_full? 0 : (m<=n) ? m : n;
 
 
 
@@ -56,7 +56,7 @@ always_comb begin
 	for(integer i=0; i<=2; i++) begin
 		if(if_packet_in[i].valid == 1) begin
 			n_wptr = wptr + i + 1;
-			
+
 		end
 	end
 end
@@ -94,8 +94,6 @@ always_comb begin
 		n_rptr = rptr + 2;
 	end else if(dp_packet_count == 2'b11) begin
 		n_rptr = rptr + 3;
-	end else if(SQ_full) begin 
-		n_rptr = rptr;
 	end else begin
 		n_rptr = rptr;
 	end
@@ -103,7 +101,7 @@ end
 
 
 always_comb begin
-	if((reset || dp_packet_count == 2'b00) && enable && SQ_full) begin
+	if(reset || dp_packet_count == 2'b00 || SQ_full) begin
 		ib_dp_packet_out[0].inst  =  `NOP;
 		ib_dp_packet_out[0].PC    =  0;
 		ib_dp_packet_out[0].NPC   =  0;
@@ -182,8 +180,8 @@ always_ff @(posedge clock) begin
 			rptr <=  n_rptr;
 		end
 	end
-	// $display("wptr = %d, rptr = %d", wptr, rptr);
-	// $display("dp_packet_count = %d", dp_packet_count);
+	 $display("wptr = %d, rptr = %d", wptr, rptr);
+	 $display("dp_packet_count = %d", dp_packet_count);
 end
 
 endmodule

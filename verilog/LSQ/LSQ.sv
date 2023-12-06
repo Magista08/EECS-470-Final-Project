@@ -44,6 +44,7 @@ module LSQ (
     LSQ_DCACHE_PACKET                           next_SQ_DC_packet;
 
     logic                                       to_DC_full; // Dcache can only have 1 input
+    logic                                       next_SQ_full;
 
     logic [$clog2(`SQ_SIZE):0]                  head, next_head, tail, next_tail;
     logic [$clog2(`SQ_SIZE)-1:0]                head_idx, next_head_idx, tail_idx, next_tail_idx;
@@ -90,6 +91,7 @@ module LSQ (
         next_SQ_DC_packet = 0;
         to_DC_full = 0;
         psel_table = 0;
+	next_SQ_full = 0;
 
         if (clear) begin
             next_SQ = 0;
@@ -99,6 +101,7 @@ module LSQ (
             next_SQ_DC_packet = 0;
             to_DC_full = 0;
             psel_table = 0;
+	    next_SQ_full = 0;
 
         end else begin // Order of the following steps may change
 
@@ -120,7 +123,7 @@ module LSQ (
             next_tail_flag = next_tail[$clog2(`SQ_SIZE)];
 
             // Give DP full information
-            SQ_full = (next_tail_idx == next_head_idx && next_tail_flag != next_head_flag) || ((next_tail_idx+3'b001) == next_head_idx) || ((next_tail_idx+3'b010) == next_head_idx);
+            next_SQ_full = (next_tail_idx == next_head_idx && next_tail_flag != next_head_flag) || ((next_tail_idx+3'b001) == next_head_idx) || ((next_tail_idx+3'b010) == next_head_idx) || ((next_tail_idx+3'b011) == next_head_idx) || ((next_tail_idx+3'b100) == next_head_idx) || ((next_tail_idx+3'b101) == next_head_idx) || ((next_tail_idx+3'b110) == next_head_idx);
             // SQ_full = (next_tail_idx >= next_head_idx && next_tail_flag != next_head_flag) || ((next_tail_idx+3'b001) == next_head_idx) || ((next_tail_idx+3'b010) == next_head_idx);
 
             // Give RS tail information
@@ -345,9 +348,9 @@ module LSQ (
                             end
                             req1 = psel_table.psel_1;
 
-                            gnt1[7] = req1[7];
-                            pre_req1[7] = req1[7];
-                            for(int i=6; i>=0; i--)begin
+                            gnt1[`SQ_SIZE-1] = req1[`SQ_SIZE-1];
+                            pre_req1[`SQ_SIZE-1] = req1[`SQ_SIZE-1];
+                            for(int i=`SQ_SIZE-2; i>=0; i--)begin
                                 gnt1[i] = req1[i] & ~pre_req1[i+1];
                                 pre_req1[i] = req1[i] | pre_req1[i+1];
                             end
@@ -355,7 +358,7 @@ module LSQ (
                             gnt1_log = 0;
                             if (gnt1!=0) begin
                                 // gnt1_log = $clog2(gnt1);
-                                for (int i=7; i>=0; i--) begin
+                                for (int i=`SQ_SIZE-1; i>=0; i--) begin
                                     if (gnt1[i]==1) begin
                                         gnt1_log = i;
                                         break;
@@ -421,9 +424,9 @@ module LSQ (
 
                             req2 = psel_table.psel_2;
 
-                            gnt2[7] = req2[7];
-                            pre_req2[7] = req2[7];
-                            for(int i=6; i>=0; i--)begin
+                            gnt2[`SQ_SIZE-1] = req2[`SQ_SIZE-1];
+                            pre_req2[`SQ_SIZE-1] = req2[`SQ_SIZE-1];
+                            for(int i=`SQ_SIZE-2; i>=0; i--)begin
                                 gnt2[i] = req2[i] & ~pre_req2[i+1];
                                 pre_req2[i] = req2[i] | pre_req2[i+1];
                             end
@@ -431,7 +434,7 @@ module LSQ (
                             gnt2_log = 0;
                             if (gnt2!=0) begin
                                 // gnt1_log = $clog2(gnt1);
-                                for (int i=7; i>=0; i--) begin
+                                for (int i=`SQ_SIZE-1; i>=0; i--) begin
                                     if (gnt2[i]==1) begin
                                         gnt2_log = i;
                                         break;
@@ -482,11 +485,11 @@ module LSQ (
 
                         // get data from DCache or send data to DCache
                         if (next_SQ[i].retire_valid==0) begin
-                            if ((DC_SQ_packet[0].st_or_ld==1) && (DC_SQ_packet[0].valid==1) && (DC_SQ_packet[0].address=={next_SQ[i].word_addr, next_SQ[i].res_addr})) begin
+                            if ((DC_SQ_packet[0].st_or_ld==1) && (DC_SQ_packet[0].valid==1) && (DC_SQ_packet[0].address=={next_SQ[i].word_addr, next_SQ[i].res_addr}) && (DC_SQ_packet[0].T == next_SQ[i].T)) begin
                                 next_SQ[i].value = DC_SQ_packet[0].value;
                                 next_SQ[i].retire_valid = 1;    
 
-                            end else if ((DC_SQ_packet[1].st_or_ld==1) && (DC_SQ_packet[1].valid==1) && (DC_SQ_packet[1].address=={next_SQ[i].word_addr, next_SQ[i].res_addr})) begin
+                            end else if ((DC_SQ_packet[1].st_or_ld==1) && (DC_SQ_packet[1].valid==1) && (DC_SQ_packet[1].address=={next_SQ[i].word_addr, next_SQ[i].res_addr}) && (DC_SQ_packet[1].T == next_SQ[i].T)) begin
                                 next_SQ[i].value = DC_SQ_packet[1].value;
                                 next_SQ[i].retire_valid = 1;
 
@@ -496,7 +499,7 @@ module LSQ (
                                 next_SQ_DC_packet.value = 0; // should be useless
                                 next_SQ_DC_packet.st_or_ld = 1;
                                 next_SQ_DC_packet.mem_size = next_SQ[i].mem_size[1:0];
-                                next_SQ_DC_packet.NPC = next_SQ[i].NPC;
+                                next_SQ_DC_packet.T = next_SQ[i].T;
 
                                
                                 to_DC_full = 1;
@@ -577,7 +580,7 @@ module LSQ (
                 next_SQ_DC_packet.value = next_SQ[next_head_idx].value;
                 next_SQ_DC_packet.st_or_ld = 0;
                 next_SQ_DC_packet.mem_size = next_SQ[next_head_idx].mem_size[1:0];
-                next_SQ_DC_packet.NPC = next_SQ[next_head_idx].NPC;
+                next_SQ_DC_packet.T = next_SQ[next_head_idx].T;
 
 
                 // Free the retired store
@@ -620,14 +623,39 @@ module LSQ (
     //     end
     // end
 
+                 
+
+
 
     always_ff @(posedge clock) begin
+
+            $display("next_head: %b LOAD_STORE_input.valid:%b%b%b", next_head, LOAD_STORE_input[0].valid, LOAD_STORE_input[1].valid, LOAD_STORE_input[2].valid);
+            $display("next_tail: %b position:%b", next_tail, position);  
+            $display("LSQ_buffer_busy: %b", LSQ_buffer_busy);   
+        for (int i=0; i<`SQ_SIZE; i=i+1) begin
+            $display("next_SQ[%0d].addr_cannot_to_DCache: %b", i, next_SQ[i].addr_cannot_to_DCache);
+            $display("next_SQ[%0d].pre_store_done: %b", i, next_SQ[i].pre_store_done);
+            $display("next_SQ[%0d].retire_valid: %b", i, next_SQ[i].retire_valid);
+            $display("next_SQ[%0d].sent_to_CompBuff: %b", i, next_SQ[i].sent_to_CompBuff);
+            $display("next_SQ[%0d].load_sent_to_DCache: %b", i, next_SQ[i].load_sent_to_DCache);
+            $display("next_SQ[%0d].valid: %b", i, next_SQ[i].valid);
+            $display("next_SQ[%0d].T: %b", i, next_SQ[i].T);
+            $display("next_SQ[%0d].word_addr: %b", i, next_SQ[i].word_addr);
+            $display("next_SQ[%0d].res_addr: %b", i, next_SQ[i].res_addr);
+            $display("next_SQ[%0d].value: %h", i, next_SQ[i].value);
+            $display("next_SQ[%0d].load_1_store_0: %b", i, next_SQ[i].load_1_store_0);
+            $display("next_SQ[%0d].mem_size: %b", i, next_SQ[i].mem_size);
+            $display("next_SQ[%0d].NPC: %h", i, next_SQ[i].NPC);
+
+        end
+
         if (reset || clear) begin
             SQ <= 0;
             head <= 0;
             tail <= 0;
             SQ_COMP_packet <= 0;
             SQ_DC_packet <= 0;
+	    SQ_full <= 0;
 
         end else begin
             SQ <= next_SQ;
@@ -635,6 +663,7 @@ module LSQ (
             tail <= next_tail;
             SQ_COMP_packet <= next_SQ_COMP_packet;
             SQ_DC_packet <= next_SQ_DC_packet;
+	    SQ_full <= next_SQ_full;
         end
     end
 
