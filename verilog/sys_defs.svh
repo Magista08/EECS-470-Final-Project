@@ -26,7 +26,7 @@
 // sizes
 `define ROBLEN 32
 `define RSLEN 16
-`define SQ_SIZE 32
+`define SQ_SIZE 16
 //`define PHYS_REG_SZ (32 + `ROB_SZ)
 
 // Internal macros, no other file should need these

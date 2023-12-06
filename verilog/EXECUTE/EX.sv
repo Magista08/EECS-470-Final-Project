@@ -293,7 +293,7 @@ module EX (
         .RT_packet(RT_packet),
         .DC_SQ_packet(DC_SQ_packet),
         .LSQ_buffer_busy(LSQ_buffer_busy),
-
+        
         .SQ_tail(SQ_tail),
         .SQ_full(SQ_full),
         .SQ_COMP_packet(SQ_COMP_packet),

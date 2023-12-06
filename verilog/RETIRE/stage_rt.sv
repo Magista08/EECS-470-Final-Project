@@ -117,9 +117,9 @@ module stage_rt(
     end
 
     //////////////////////////////////////////////////////////////////// DISPLAY ///////////////////////////////////////////////////////////////////////////
-    always_ff @(posedge clock) begin
-        $display("--------------------------------------------RETIRE--------------------------------------------");
-        $display("clock=%d, reset=%d, rt_busy=%d, fake_halt=%d", clock, reset, rt_busy, fake_halt);
-    end
+    // always_ff @(posedge clock) begin
+    //     $display("--------------------------------------------RETIRE--------------------------------------------");
+    //     $display("clock=%d, reset=%d, rt_busy=%d, fake_halt=%d", clock, reset, rt_busy, fake_halt);
+    // end
 
 endmodule

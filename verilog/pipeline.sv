@@ -166,6 +166,7 @@ module pipeline (
         $display("wr_idx[1]:%h wr_data[1]:%h wr_en[1]:%b", pipeline_commit_wr_idx[1], pipeline_commit_wr_data[1], pipeline_commit_wr_en[1]); 
         $display("wr_idx[2]:%h wr_data[2]:%h wr_en[2]:%b", pipeline_commit_wr_idx[2], pipeline_commit_wr_data[2], pipeline_commit_wr_en[2]);
 	//$display("squash_pc:%h if_ic_addr:%h ", squash_pc, if_ic_addr);
+        $display("halt:%b", halt);
         $display("-------------------------------------------------------------------------------------------------------------\n"); 
     end
     

@@ -360,7 +360,7 @@ module DCACHE(
 	    evict_data <= n_evict_data;
 	    evict_valid <= n_evict_valid;
 	    for(int m=0; m<4; m++) begin
-		if(squash_flag) begin
+		if(squash_flag && n_mshr_table[m].st_or_ld) begin
 		    mshr_state_table[m] <= INVALID;
 		    mshr_response_table[m] <= 3'b0;
 		end else if(lsq_packet_in.valid && (miss && ~mshr_state_completed_match) && masked_invalid[m]) begin

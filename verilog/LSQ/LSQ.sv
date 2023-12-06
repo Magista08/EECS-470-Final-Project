@@ -582,7 +582,7 @@ module LSQ (
                 next_SQ_DC_packet.mem_size = next_SQ[next_head_idx].mem_size[1:0];
                 next_SQ_DC_packet.T = next_SQ[next_head_idx].T;
 
-
+                
                 // Free the retired store
                 next_SQ[next_head_idx] = 0;
                 next_head = head + 1;
@@ -633,11 +633,11 @@ module LSQ (
             $display("next_tail: %b position:%b", next_tail, position);  
             $display("LSQ_buffer_busy: %b", LSQ_buffer_busy);   
         for (int i=0; i<`SQ_SIZE; i=i+1) begin
-            $display("next_SQ[%0d].addr_cannot_to_DCache: %b", i, next_SQ[i].addr_cannot_to_DCache);
-            $display("next_SQ[%0d].pre_store_done: %b", i, next_SQ[i].pre_store_done);
-            $display("next_SQ[%0d].retire_valid: %b", i, next_SQ[i].retire_valid);
-            $display("next_SQ[%0d].sent_to_CompBuff: %b", i, next_SQ[i].sent_to_CompBuff);
-            $display("next_SQ[%0d].load_sent_to_DCache: %b", i, next_SQ[i].load_sent_to_DCache);
+            //$display("next_SQ[%0d].addr_cannot_to_DCache: %b", i, next_SQ[i].addr_cannot_to_DCache);
+            //$display("next_SQ[%0d].pre_store_done: %b", i, next_SQ[i].pre_store_done);
+            //$display("next_SQ[%0d].retire_valid: %b", i, next_SQ[i].retire_valid);
+            //$display("next_SQ[%0d].sent_to_CompBuff: %b", i, next_SQ[i].sent_to_CompBuff);
+            //$display("next_SQ[%0d].load_sent_to_DCache: %b", i, next_SQ[i].load_sent_to_DCache);
             $display("next_SQ[%0d].valid: %b", i, next_SQ[i].valid);
             $display("next_SQ[%0d].T: %b", i, next_SQ[i].T);
             $display("next_SQ[%0d].word_addr: %b", i, next_SQ[i].word_addr);
