@@ -40,6 +40,7 @@ module EX (
 
     output logic icache_busy,
     output logic rt_busy,
+    output logic rob_busy,
     output logic [`XLEN-1:0] proc2Dmem_addr,
     output logic [63:0] proc2Dmem_data,
     output logic [1:0] proc2Dmem_command,
@@ -313,6 +314,7 @@ module EX (
         .lsq_packet_out(DC_SQ_packet),
         .icache_busy(icache_busy),
         .rt_busy(rt_busy),
+        .rob_busy(rob_busy),
         .proc2Dmem_addr(proc2Dmem_addr),
         .proc2Dmem_data(proc2Dmem_data),
         .proc2Dmem_command(proc2Dmem_command),

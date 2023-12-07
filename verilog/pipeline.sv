@@ -102,6 +102,7 @@ module pipeline (
     logic                                   sq_full; // to insn buffer, Store Queue full
     // DCache
     logic rt_busy;
+    logic rob_busy;
     logic d_i_busy;
 
     // Outputs from CP-stage and CP/WB Pipeline Register
@@ -372,6 +373,7 @@ module pipeline (
         .CDB_packet_in(cdb_rob_packet),
         .DP_packet_in(dp_packet_out),
         .MT_packet_in(mt_rob_packet),
+        .rob_busy(rob_busy),
         
         //output 
         .IF_packet_out(rob_if_packet),
@@ -544,6 +546,7 @@ module pipeline (
         .SQ_full(sq_full), // to instruction buffer
         .icache_busy(d_i_busy),
         .rt_busy(rt_busy),
+        .rob_busy(rob_busy),
         .proc2Dmem_addr(proc2Dmem_addr),
         .proc2Dmem_data(proc2Dmem_data),
         .proc2Dmem_command(proc2Dmem_command),
