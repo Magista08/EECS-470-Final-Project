@@ -190,7 +190,7 @@ module EX (
                 1'b0,                    // cond_branch
                 1'b0,                    // uncond_branch
                 1'b0,                    // halt
-                1'b0,                    // illegal
+                1'b1,                    // illegal
                 1'b0,                    // csr_op
                 1'b0,                    // valid
                 FUNC_ALU,                 // FUNC_UNIT
@@ -214,7 +214,7 @@ module EX (
                 1'b0,                    // cond_branch
                 1'b0,                    // uncond_branch
                 1'b0,                    // halt
-                1'b0,                    // illegal
+                1'b1,                    // illegal
                 1'b0,                    // csr_op
                 1'b0,                    // valid
                 FUNC_ALU,                 // FUNC_UNIT
@@ -239,7 +239,7 @@ module EX (
                 1'b0,                    // cond_branch
                 1'b0,                    // uncond_branch
                 1'b0,                    // halt
-                1'b0,                    // illegal
+                1'b1,                    // illegal
                 1'b0,                    // csr_op
                 1'b0,                    // valid
                 FUNC_ALU,                 // FUNC_UNIT
@@ -253,7 +253,7 @@ module EX (
 	n_st_in_num = st_in_num;
         for (int i=0; i<3; i=i+1) begin
             // if (IS_packet[i].illegal == 0) begin // change to nop?
-            if (IS_packet[i].inst != `NOP) begin // Maybe they don't want me to use NOP
+            if (!IS_packet[i].illegal) begin // Maybe they don't want me to use NOP
 		        if (IS_packet[i].func_unit == FUNC_ALU) begin
                     ALU_input[i] = IS_packet[i];  
                     // $display("-------ALU--------");                  

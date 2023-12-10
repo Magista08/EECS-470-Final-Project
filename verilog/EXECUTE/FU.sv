@@ -136,9 +136,9 @@ module FU_ALU (
     assign next_halt = fu_input.halt;
     assign next_NPC = fu_input.NPC;
     assign next_tag = fu_input.T;  
-    assign busy = (fu_input.inst!=`NOP) & (~result_ready); // unused
+    assign busy = (!fu_input.illegal) & (~result_ready); // unused
     // assign busy = 0; // I think ALU can never be busy...
-    assign next_result_ready = (fu_input.inst != `NOP);
+    assign next_result_ready = (!fu_input.illegal);
     assign next_branch_taken = fu_input.uncond_branch || (fu_input.cond_branch && take_conditional);
 
     // to BP 2023/12/01
@@ -407,7 +407,7 @@ module FU_MULT (
 		.mplier(mplier),
 		// .start(fu_input.can_execute), // need to consider what this is
         // .start(~fu_input.illegal),
-        .start((fu_input.inst != `NOP)),
+        .start(!fu_input.illegal),
         .high_1_low_0_in(high_1_low_0), // special use
         .halt_in(fu_input.halt),
         .NPC_in(fu_input.NPC),
@@ -464,7 +464,7 @@ module FU_LOAD_STORE (
     assign next_NPC = fu_input.wr_mem? fu_input.NPC :0;
     assign next_tag = fu_input.wr_mem? fu_input.T:0;  
     // assign busy = (fu_input.inst!=`NOP) & (~result_ready); // unused
-    assign next_result_ready = fu_input.wr_mem? (fu_input.inst != `NOP):0;
+    assign next_result_ready = fu_input.wr_mem? (!fu_input.illegal):0;
     assign next_result = fu_input.wr_mem? next_addr:0;
     
     

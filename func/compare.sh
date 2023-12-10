@@ -22,26 +22,28 @@ if [ $P4_TEST_EXIST -eq 0 ]; then
     exit 1
 fi
 
+mkdir -p correct_output
+
 # Find if the correct output file exists
 if [ ! -f ../correct_output/$TEST_NAME.$FILE_TYPE ]; then
-    cd ../project03
+    cd ../project3
 
     # Check if the test file in project03
     TEST_EXTSTED=`ls -l programs/ | grep $TEST_NAME | wc -l`
     if [ $TEST_EXTSTED -eq 0 ]; then
-        cp ../final_project/programs/$TEST_NAME.s programs/$TEST_NAME.s
+        cp ../p4_1_copy/programs/$TEST_NAME.s programs/$TEST_NAME.s
     fi
 
     # Get the correct output
     make $TEST_NAME.out
 
     # Move the correct output to final_project
-    mv output/$TEST_NAME.out  ../final_project/correct_output/$TEST_NAME.out
-    mv output/$TEST_NAME.wb   ../final_project/correct_output/$TEST_NAME.wb
-    mv output/$TEST_NAME.ppln ../final_project/correct_output/$TEST_NAME.ppln
+    mv output/$TEST_NAME.out  ../p4_1_copy/correct_output/$TEST_NAME.out
+    mv output/$TEST_NAME.wb   ../p4_1_copy/correct_output/$TEST_NAME.wb
+    mv output/$TEST_NAME.ppln ../p4_1_copy/correct_output/$TEST_NAME.ppln
 
     # Go Back
-    cd ../final_project/
+    cd ../p4_1_copy/
 fi
 
 # Get the correct output

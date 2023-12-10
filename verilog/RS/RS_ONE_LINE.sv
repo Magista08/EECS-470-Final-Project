@@ -87,7 +87,7 @@ module RS_ONE_LINE (
 			n_rs_line.cond_branch = 1'b0;
 			n_rs_line.uncond_branch = 1'b0;
 			n_rs_line.halt = 1'b0;
-			n_rs_line.illegal = 1'b0;
+			n_rs_line.illegal = 1'b1;
 			n_rs_line.csr_op = 1'b0;
 			n_rs_line.valid = 1'b0;
 			n_rs_line.func_unit = FUNC_NOP;
@@ -99,7 +99,7 @@ module RS_ONE_LINE (
 			// enable =1 indicates we should observe RS_line
 			if (enable) begin
 				// when instruction fetched is not a noop -- insert a new inst.
-				if (dp_packet.inst != `NOP) begin
+				if (!dp_packet.illegal) begin
 
 					n_rs_line.busy = 1; // busy = 1 when enable
 					n_rs_line.RSID = line_id;
@@ -206,7 +206,7 @@ module RS_ONE_LINE (
 					n_rs_line.cond_branch = 1'b0;
 					n_rs_line.uncond_branch = 1'b0;
 					n_rs_line.halt = 1'b0;
-					n_rs_line.illegal = 1'b0;
+					n_rs_line.illegal = 1'b1;
 					n_rs_line.csr_op = 1'b0;
 					n_rs_line.valid = 1'b0;
 					n_rs_line.func_unit = FUNC_NOP;
@@ -240,7 +240,7 @@ module RS_ONE_LINE (
 						1'b0,				     // cond_branch
 						1'b0,                    // uncond_branch
 						1'b0,				     // halt
-						1'b0,			         // illegal
+						1'b1,			         // illegal
 						1'b0,				     // csr_op
 						1'b0,  			     	 // valid
 						FUNC_ALU,				 // func_unit
@@ -336,7 +336,7 @@ module RS_ONE_LINE (
 			rs_line.cond_branch <= 1'b0;
 			rs_line.uncond_branch <= 1'b0;
 			rs_line.halt <= 1'b0;
-			rs_line.illegal <= 1'b0;
+			rs_line.illegal <= 1'b1;
 			rs_line.csr_op <= 1'b0;
 			rs_line.valid <= 1'b0;
 			rs_line.func_unit <= FUNC_NOP;

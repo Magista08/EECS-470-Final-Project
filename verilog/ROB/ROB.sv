@@ -219,13 +219,13 @@ module ROB (
     assign RS_packet_out[0].T = tail;
     assign RS_packet_out[1].V1 = rob_table[MT_packet_in[1].T1].value;
     assign RS_packet_out[1].V2 = rob_table[MT_packet_in[1].T2].value;
-    assign RS_packet_out[1].valid1 = rob_table[MT_packet_in[0].T1].busy;
-    assign RS_packet_out[1].valid2 = rob_table[MT_packet_in[0].T2].busy;
+    assign RS_packet_out[1].valid1 = rob_table[MT_packet_in[1].T1].busy;
+    assign RS_packet_out[1].valid2 = rob_table[MT_packet_in[1].T2].busy;
     assign RS_packet_out[1].T = tail_plus1[$clog2(`ROBLEN)-1:0];
     assign RS_packet_out[2].V1 = rob_table[MT_packet_in[2].T1].value;
     assign RS_packet_out[2].V2 = rob_table[MT_packet_in[2].T2].value;
-    assign RS_packet_out[2].valid1 = rob_table[MT_packet_in[0].T1].busy;
-    assign RS_packet_out[2].valid2 = rob_table[MT_packet_in[0].T2].busy;
+    assign RS_packet_out[2].valid1 = rob_table[MT_packet_in[2].T1].busy;
+    assign RS_packet_out[2].valid2 = rob_table[MT_packet_in[2].T2].busy;
     assign RS_packet_out[2].T = tail_plus2[$clog2(`ROBLEN)-1:0];
 
 
@@ -280,8 +280,11 @@ module ROB (
             head         <=  head_n;
             tail         <=  tail_n;
         end
-		$display("3rd take branch:%b 1st ls:%b",rob_table_n[head_plus2[$clog2(`ROBLEN)-1:0]].take_branch, rob_table_n[head].rd_wr_mem);
-		$display("head:%h valid:%b%b%b", head_n, RT_packet_out[0].valid, RT_packet_out[1].valid, RT_packet_out[2].valid);
+	if((head_n == head && ~RT_packet_out[0].valid) || (head_n == head+1 && RT_packet_out[0].valid && ~RT_packet_out[1].valid) || (head_n == head+2 && RT_packet_out[0].valid && RT_packet_out[1].valid && ~RT_packet_out[2].valid) || (head_n == head+3 && RT_packet_out[0].valid && RT_packet_out[1].valid && RT_packet_out[2].valid)) begin
+	    $display("design matches");
+	end else begin
+	    $display("design mot match");
+	end
     end
 
 
