@@ -414,7 +414,7 @@ module pipeline (
     always_ff @(posedge clock) begin
 	//if branch is taken, squash predicted instruction
 	// if there is data hazard, insert nop
-        if (reset) begin
+        if (reset || squash_flag) begin
             is_ex_reg[0] <= {
                 {$clog2(`ROBLEN){1'b0}}, // T
                 `NOP,                    // inst
