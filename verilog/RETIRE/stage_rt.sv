@@ -27,24 +27,24 @@ module stage_rt(
 
     assign rt_dp_packet_out[0].retire_reg  = (rob_rt_packet_in[0].dest_reg_idx != `ZERO_REG) 
                                             ? rob_rt_packet_in[0].dest_reg_idx : 0; // to wr_idx in regfile
-    assign rt_dp_packet_out[0].value       = (rob_rt_packet_in[0].dest_reg_idx != `ZERO_REG) 
-                                            ? rob_rt_packet_in[0].value : 0; // to wr_data in regfile
+    assign rt_dp_packet_out[0].value       = (!rob_rt_packet_in[0].take_branch) 
+                                            ? rob_rt_packet_in[0].value : rob_rt_packet_in[0].NPC; // to wr_data in regfile
     assign rt_dp_packet_out[0].valid       = (fake_halt) ? 0 : (rob_rt_packet_in[0].dest_reg_idx != `ZERO_REG)
                                             ? rob_rt_packet_in[0].valid : 0; // to wr_en in regfile: valid=1 means the regfile can be written
 
     // 3. Only if the last one or two instructions do not take branches, then the current instruction can be written back to regfile
     assign rt_dp_packet_out[1].retire_reg  = (rob_rt_packet_in[1].dest_reg_idx != `ZERO_REG) 
                                             ? rob_rt_packet_in[1].dest_reg_idx : 0;
-    assign rt_dp_packet_out[1].value       = (rob_rt_packet_in[1].dest_reg_idx != `ZERO_REG) 
-                                            ? rob_rt_packet_in[1].value : 0;
+    assign rt_dp_packet_out[1].value       = (!rob_rt_packet_in[1].take_branch) 
+                                            ? rob_rt_packet_in[1].value : rob_rt_packet_in[1].NPC;
     assign rt_dp_packet_out[1].valid       = (fake_halt) ? 0 : ((rob_rt_packet_in[1].dest_reg_idx != `ZERO_REG) && 
                                              ~(rob_rt_packet_in[0].valid && (rob_rt_packet_in[0].take_branch || rob_rt_packet_in[0].halt))) 
                                              ? rob_rt_packet_in[1].valid : 0;
 
     assign rt_dp_packet_out[2].retire_reg  = (rob_rt_packet_in[2].dest_reg_idx != `ZERO_REG) 
                                             ? rob_rt_packet_in[2].dest_reg_idx : 0;
-    assign rt_dp_packet_out[2].value       = (rob_rt_packet_in[2].dest_reg_idx != `ZERO_REG)                                          
-                                            ? rob_rt_packet_in[2].value : 0;
+    assign rt_dp_packet_out[2].value       = (!rob_rt_packet_in[2].take_branch)                                          
+                                            ? rob_rt_packet_in[2].value : rob_rt_packet_in[2].NPC;
     assign rt_dp_packet_out[2].valid       = (fake_halt) ? 0 : ((rob_rt_packet_in[2].dest_reg_idx != `ZERO_REG) && 
                                            ~((rob_rt_packet_in[1].valid && (rob_rt_packet_in[1].take_branch || rob_rt_packet_in[1].halt)) || ((rob_rt_packet_in[0].valid & rob_rt_packet_in[0].take_branch || rob_rt_packet_in[0].halt))))
                                             ? rob_rt_packet_in[2].valid : 0;

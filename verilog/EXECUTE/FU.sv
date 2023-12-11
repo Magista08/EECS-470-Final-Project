@@ -202,6 +202,7 @@ module FU_ALU (
                 // should taken in this case for we took branch incorrectly
                 next_true_branch_taken = 1;
             end
+            next_true_result = fu_input.PC + 4;
 	        state = 3;
         end 
     end

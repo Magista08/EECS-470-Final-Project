@@ -31,9 +31,7 @@ IF_ID_PACKET [BUFFER_DEPTH-1:0] n_slot;
 
 assign insn_buffer_empty = (wptr == rptr);
 //
-assign insn_buffer_full = (wptr == {~rptr[PTR_DEPTH-1], rptr[PTR_DEPTH-2:0]})   || 
-						  (wptr+1 == {~rptr[PTR_DEPTH-1], rptr[PTR_DEPTH-2:0]}) || 
-						  (wptr+2 == {~rptr[PTR_DEPTH-1], rptr[PTR_DEPTH-2:0]});
+assign insn_buffer_full = (ready_insn_size > BUFFER_DEPTH-3 || ready_insn_size == BUFFER_DEPTH-3);
 // find the size of the if_packt
 assign if_packet_size = n_wptr - wptr;
 // find how many insns in the buffer are ready
@@ -63,27 +61,28 @@ end
 
 // Write the buffer
 always_comb begin
-	for(integer k=0; k<=BUFFER_DEPTH; k++) begin
-		n_slot[k] = slot[k];
-	end
-	case(if_packet_size)
+	if(reset || squash_flag) begin
+		n_slot = 0;
+	end else begin 
+		case(if_packet_size)
 
-		2'b01: begin
-			n_slot[wptr[PTR_DEPTH-2:0]]   = if_packet_in[0];
-		end
-		2'b10: begin
-			n_slot[wptr[PTR_DEPTH-2:0]]   = if_packet_in[0];
-			n_slot[wptr1[PTR_DEPTH-2:0]]  = if_packet_in[1];
-		end
-		2'b11: begin
-			n_slot[wptr[PTR_DEPTH-2:0]]   = if_packet_in[0];
-			n_slot[wptr1[PTR_DEPTH-2:0]]  = if_packet_in[1];
-			n_slot[wptr2[PTR_DEPTH-2:0]]  = if_packet_in[2];
-		end
-		default: begin
-			n_slot = slot;
-		end
-	endcase
+			2'b01: begin
+				n_slot[wptr[PTR_DEPTH-2:0]]   = if_packet_in[0];
+			end
+			2'b10: begin
+				n_slot[wptr[PTR_DEPTH-2:0]]   = if_packet_in[0];
+				n_slot[wptr1[PTR_DEPTH-2:0]]  = if_packet_in[1];
+			end
+			2'b11: begin
+				n_slot[wptr[PTR_DEPTH-2:0]]   = if_packet_in[0];
+				n_slot[wptr1[PTR_DEPTH-2:0]]  = if_packet_in[1];
+				n_slot[wptr2[PTR_DEPTH-2:0]]  = if_packet_in[2];
+			end
+			default: begin
+				n_slot = slot;
+			end
+		endcase
+	end
 end
 
 
