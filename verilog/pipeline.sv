@@ -192,7 +192,7 @@ module pipeline (
             proc2mem_addr    = proc2Imem_addr;
             // proc2mem_size    = DOUBLE;          // instructions load a full memory line (64 bits)
         end
-        proc2mem_data = {32'b0, proc2Dmem_data};
+        proc2mem_data = proc2Dmem_data;
     end
 
     //////////////////////////////////////////////////

@@ -205,18 +205,20 @@ module BP(
                 end
             end
 
-            if (i == 0 && bp_taken_out[i]) begin
-                bp_npc_out = bp_packet_out[i].NPC;
-            end else if(i!= 0 && bp_taken_out[i] && !bp_taken_out[i-1]) begin
-                bp_npc_out = bp_packet_out[i].NPC;
-            end else if(if_packet_in[i].valid) begin
-                if (i == 0) begin
-                    bp_npc_out = if_packet_in[i].NPC;
-                end else if (!bp_taken_out[i-1]) begin
-                    bp_npc_out = if_packet_in[i].NPC;
-                end
-                
-            end 
+            if (i == 0) begin
+		    if (bp_taken_out[i]) begin
+			 bp_npc_out = bp_packet_out[i].NPC;	
+		    end else if (if_packet_in[i].valid) begin
+			 bp_npc_out = if_packet_in[i].NPC;
+		    end
+		end else begin
+		    if (bp_taken_out[i] && !bp_taken_out[i-1]) begin
+			bp_npc_out = bp_packet_out[i].NPC;
+		    end else if (if_packet_in[i].valid && !bp_taken_out[i-1]) begin
+			bp_npc_out = if_packet_in[i].NPC;
+		    end
+		end
+
             // $display("if_packet_in[0].inst: %h if_packet_in[0].valid: %d, if_packet_in[0].PC:%h if_bp_npc_out: %h, bp_taken_out:%b", 
             //           if_packet_in[0].inst,    if_packet_in[0].valid,     if_packet_in[0].PC,    bp_npc_out, bp_taken_out);
             // $display("if_packet_in[1].inst: %h if_packet_in[1].valid: %d, if_packet_in[1].PC:%h if_bp_npc_out: %h, bp_taken_out:%b", 

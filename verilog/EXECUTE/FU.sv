@@ -215,6 +215,7 @@ module FU_ALU (
             tag <= 0;
             result_ready <= 0;
             branch_taken <= 0;
+	    EX_BP_packet_out <= 0;
 
         end else begin
             result <= next_true_result;

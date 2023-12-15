@@ -305,20 +305,16 @@ module testbench;
 
             // deal with any halting conditions
             if(pipeline_error_status != NO_ERROR || debug_counter > 50000000) begin
-		if (core.stage_ex0.DCache_0.lsq_packet_in.valid &&
-			core.stage_ex0.DCache_0.lsq_packet_in.st_or_ld == 0) begin
-			 memory.unified_memory[core.stage_ex0.DCache_0.lsq_packet_in.address] = core.stage_ex0.DCache_0.lsq_packet_in.value;	
-	 $display("    address [%h] back to memory with value %h when halt", core.stage_ex0.DCache_0.lsq_packet_in.address, core.stage_ex0.DCache_0.lsq_packet_in.value);
-		end
+		
                 for (int i = 0; i < 16; i++) begin
                     if (dcache_table_out[i].line[0].valid) begin
                         curr_addr = {dcache_table_out[i].line[0].tag, i[3:0]};
-                        $display("    address [%h] back to memory with value %h", curr_addr, dcache_table_out[i].line[0].value);
+                        //$display("    address [%h] back to memory with value %h", curr_addr, dcache_table_out[i].line[0].value);
                         memory.unified_memory[curr_addr] = dcache_table_out[i].line[0].value;
                     end
                     if (dcache_table_out[i].line[1].valid) begin
                         curr_addr = {dcache_table_out[i].line[1].tag, i[3:0]};
-                        $display("    address [%h] back to memory with value %h", curr_addr, dcache_table_out[i].line[1].value);
+                        //$display("    address [%h] back to memory with value %h", curr_addr, dcache_table_out[i].line[1].value);
                         memory.unified_memory[curr_addr] = dcache_table_out[i].line[1].value;
                     end
                 end
