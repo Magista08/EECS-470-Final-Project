@@ -86,7 +86,7 @@ module stage_if (
 
 			if_dp_packet_out[1].inst      = (~if_valid1 || Icache_if_packet_in[1].inst == 0) ? `NOP : Icache_if_packet_in[1].inst;	
 			if_dp_packet_out[1].PC        = PC_reg[1];
-			
+		
 			if_dp_packet_out[1].NPC       = NPC_reg[1];
 			if_dp_packet_out[1].valid     = if_valid1 && Icache_if_packet_in[0].inst != 0;
 

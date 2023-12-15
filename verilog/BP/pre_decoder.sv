@@ -39,6 +39,13 @@ module pre_decoder(
             `RV32_BLTU, `RV32_BGEU: begin
                 cond_branch = `TRUE;
             end
+            default: begin
+        	cond_branch   = `FALSE;
+        	uncond_branch = `FALSE;
+        	jump    = `FALSE;
+        	link    = `FALSE;
+        	result_out  = {`XLEN{1'b0}};
+            end
             endcase
         end
     end

@@ -133,6 +133,25 @@ module MT(
     end 
 
     always_comb begin                               // for updating output
+        mt_rob_packet[0] = '{
+                {$clog2(`ROBLEN){1'b0}},        // T1
+                {$clog2(`ROBLEN){1'b0}},        // T2
+                1'b0,                           // T1_plus
+                1'b0,                           // T2_plus
+                1'b0,                           // valid1
+                1'b0                            // valid2
+            };
+
+            mt_rs_packet[0] = '{
+                {$clog2(`ROBLEN){1'b0}},        // T1
+                {$clog2(`ROBLEN){1'b0}},        // T2
+                1'b0,                           // T1_plus
+                1'b0,                           // T2_plus
+                1'b0,                           // valid1
+                1'b0                            // valid2
+            };
+            my_case[0]=5'b0;
+
         if (squash_flag || reset) begin             // precise state
             mt_rob_packet[0] = '{
                 {$clog2(`ROBLEN){1'b0}},        // T1
@@ -614,6 +633,25 @@ module MT(
     end
 
     always_comb begin                               // for updating output
+        mt_rob_packet[1] = '{
+                {$clog2(`ROBLEN){1'b0}},        // T1
+                {$clog2(`ROBLEN){1'b0}},        // T2
+                1'b0,                           // T1_plus
+                1'b0,                           // T2_plus
+                1'b0,                           // valid1
+                1'b0                            // valid2
+            };
+
+            mt_rs_packet[1] = '{
+                {$clog2(`ROBLEN){1'b0}},        // T1
+                {$clog2(`ROBLEN){1'b0}},        // T2
+                1'b0,                           // T1_plus
+                1'b0,                           // T2_plus
+                1'b0,                           // valid1
+                1'b0                            // valid2
+            };
+            my_case[1]=5'b0;
+
         if (squash_flag || reset) begin             // precise state
             mt_rob_packet[1] = '{
                 {$clog2(`ROBLEN){1'b0}},        // T1
@@ -1095,6 +1133,25 @@ module MT(
     end
 
     always_comb begin                               // for updating output
+        mt_rob_packet[2] = '{
+                {$clog2(`ROBLEN){1'b0}},        // T1
+                {$clog2(`ROBLEN){1'b0}},        // T2
+                1'b0,                           // T1_plus
+                1'b0,                           // T2_plus
+                1'b0,                           // valid1
+                1'b0                            // valid2
+            };
+
+            mt_rs_packet[2] = '{
+                {$clog2(`ROBLEN){1'b0}},        // T1
+                {$clog2(`ROBLEN){1'b0}},        // T2
+                1'b0,                           // T1_plus
+                1'b0,                           // T2_plus
+                1'b0,                           // valid1
+                1'b0                            // valid2
+            };
+            my_case[2]=5'b0;
+            
         if (squash_flag || reset) begin             // precise state
             mt_rob_packet[2] = '{
                 {$clog2(`ROBLEN){1'b0}},        // T1

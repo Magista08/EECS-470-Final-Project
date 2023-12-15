@@ -116,7 +116,7 @@ module DCACHE(
 		//n_dcache_table[mshr_table[i].idx].line[~mshr_table[i].ptr].value = Dmem2proc_data;
 		n_dcache_table[mshr_table[i].idx].line[~mshr_table[i].ptr].tag = mshr_table[i].tag;
 		if(~mshr_table[i].st_or_ld) begin
-		    if(mshr_table[i].mem_size == BYTE) begin
+		    if(mshr_table[i].mem_size[1:0] == BYTE) begin
 			case(mshr_table[i].bo)
 			    3'b000:n_dcache_table[mshr_table[i].idx].line[~mshr_table[i].ptr].value[7:0] = mshr_table[i].in_value[7:0];
 			    3'b001:n_dcache_table[mshr_table[i].idx].line[~mshr_table[i].ptr].value[15:8] = mshr_table[i].in_value[7:0];
@@ -127,7 +127,7 @@ module DCACHE(
 			    3'b110:n_dcache_table[mshr_table[i].idx].line[~mshr_table[i].ptr].value[55:48] = mshr_table[i].in_value[7:0];
 			    3'b111:n_dcache_table[mshr_table[i].idx].line[~mshr_table[i].ptr].value[63:56] = mshr_table[i].in_value[7:0];
 			endcase
-		    end else if(mshr_table[i].mem_size == HALF) begin
+		    end else if(mshr_table[i].mem_size[1:0] == HALF) begin
 			case(mshr_table[i].bo[2:1])
 			    2'b00:n_dcache_table[mshr_table[i].idx].line[~mshr_table[i].ptr].value[15:0] = mshr_table[i].in_value[15:0];
 			    2'b01:n_dcache_table[mshr_table[i].idx].line[~mshr_table[i].ptr].value[31:16] = mshr_table[i].in_value[15:0];
@@ -142,14 +142,14 @@ module DCACHE(
 		    end
 		    income_data = n_dcache_table[mshr_table[i].idx].line[~mshr_table[i].ptr].value;
 		end
-		n_mshr_table[i].value = (mshr_table[i].bo[2]) ? Dmem2proc_data[63:32] : Dmem2proc_data[31:0];
+		n_mshr_table[i].value = Dmem2proc_data;
 	    end else begin
 		n_mshr_table[i].value = mshr_table[i].value;
 	   end
 	end
 	if(lsq_packet_in.valid) begin
 	    if(~lsq_packet_in.st_or_ld && ~miss) begin
-		if(lsq_packet_in.mem_size == BYTE) begin
+		if(lsq_packet_in.mem_size[1:0] == BYTE) begin
 		    case(in_bo)
 		        3'b000:n_dcache_table[in_idx].line[ptr].value[7:0] = lsq_packet_in.value[7:0];
 		        3'b001:n_dcache_table[in_idx].line[ptr].value[15:8] = lsq_packet_in.value[7:0];
@@ -160,7 +160,7 @@ module DCACHE(
 		        3'b110:n_dcache_table[in_idx].line[ptr].value[55:48] = lsq_packet_in.value[7:0];
 		        3'b111:n_dcache_table[in_idx].line[ptr].value[63:56] = lsq_packet_in.value[7:0];
 		    endcase
-		end else if(lsq_packet_in.mem_size == HALF) begin
+		end else if(lsq_packet_in.mem_size[1:0] == HALF) begin
 		    case(in_bo[2:1])
 			2'b00:n_dcache_table[in_idx].line[ptr].value[15:0] = lsq_packet_in.value[15:0];
 			2'b01:n_dcache_table[in_idx].line[ptr].value[31:16] = lsq_packet_in.value[15:0];
@@ -236,16 +236,16 @@ module DCACHE(
 	    lsq_packet_out[0].address = lsq_packet_in.address;
 	    lsq_packet_out[0].T = lsq_packet_in.T;
 	    lsq_packet_out[0].st_or_ld = lsq_packet_in.st_or_ld;
-	    case(lsq_packet_in.mem_size)
+	    case(lsq_packet_in.mem_size[1:0])
 		BYTE: begin
 			lsq_packet_out[0].value = (in_bo[2]) ? dcache_table[in_idx].line[ptr].value[63:32] : dcache_table[in_idx].line[ptr].value[31:0];
 			lsq_packet_out[0].value >>= (in_bo[1:0])*8;
-			lsq_packet_out[0].value[31:8] = 24'b0;
+			lsq_packet_out[0].value[31:8] = (lsq_packet_in.mem_size[2]) ? 24'b0 : {(`XLEN-8){lsq_packet_out[0].value[7]}};
 		end
 		HALF: begin
 			lsq_packet_out[0].value = (in_bo[2]) ? dcache_table[in_idx].line[ptr].value[63:32] : dcache_table[in_idx].line[ptr].value[31:0];
 			lsq_packet_out[0].value >>= (in_bo[1])*16;
-			lsq_packet_out[0].value[31:16] = 16'b0;
+			lsq_packet_out[0].value[31:16] = (lsq_packet_in.mem_size[2]) ? 16'b0 : {(`XLEN-16){lsq_packet_out[0].value[15]}};
 		end
 		default:lsq_packet_out[0].value = (in_bo[2]) ? dcache_table[in_idx].line[ptr].value[63:32] : dcache_table[in_idx].line[ptr].value[31:0];
 	    endcase
@@ -254,18 +254,18 @@ module DCACHE(
 	    	lsq_packet_out[0].address = lsq_packet_in.address;
 		lsq_packet_out[0].T = lsq_packet_in.T;
 		lsq_packet_out[0].st_or_ld = lsq_packet_in.st_or_ld;
-	    	case(lsq_packet_in.mem_size)
+	    	case(lsq_packet_in.mem_size[1:0])
 		    BYTE: begin
 			//lsq_packet_out[0].value = (in_bo[2]) ? income_data[63:32] : income_data[31:0];
 			lsq_packet_out[0].value = (in_bo[2]) ? Dmem2proc_data[63:32] : Dmem2proc_data[31:0];
 			lsq_packet_out[0].value >>= (in_bo[1:0])*8;
-			lsq_packet_out[0].value[31:8] = 24'b0;
+			lsq_packet_out[0].value[31:8] = (lsq_packet_in.mem_size[2]) ? 24'b0 : {(`XLEN-8){lsq_packet_out[0].value[7]}};
 		    end
 		    HALF: begin
 			//lsq_packet_out[0].value = (in_bo[2]) ? income_data[63:32] : income_data[31:0];
 			lsq_packet_out[0].value = (in_bo[2]) ? Dmem2proc_data[63:32] : Dmem2proc_data[31:0];
 			lsq_packet_out[0].value >>= (in_bo[1])*16;
-			lsq_packet_out[0].value[31:16] = 16'b0;
+			lsq_packet_out[0].value[31:16] = (lsq_packet_in.mem_size[2]) ? 16'b0 : {(`XLEN-16){lsq_packet_out[0].value[15]}};
 		    end
 		    //default:lsq_packet_out[0].value = (in_bo[2]) ? income_data[63:32] : income_data[31:0];
 		    default:lsq_packet_out[0].value = (in_bo[2]) ? Dmem2proc_data[63:32] : Dmem2proc_data[31:0];
@@ -293,16 +293,16 @@ module DCACHE(
 	        lsq_packet_out[1].address = {mshr_table[n].tag, mshr_table[n].idx, mshr_table[n].bo};
 		lsq_packet_out[1].T = mshr_table[n].T;
 		lsq_packet_out[1].st_or_ld = mshr_table[n].st_or_ld;
-	        case(mshr_table[n].mem_size)
+	        case(mshr_table[n].mem_size[1:0])
 		    BYTE: begin
 			lsq_packet_out[1].value = (mshr_table[n].bo[2]) ? mshr_table[n].value[63:32] : mshr_table[n].value[31:0];
 			lsq_packet_out[1].value >>= (mshr_table[n].bo[1:0])*8;
-			lsq_packet_out[1].value[31:8] = 24'b0;
+			lsq_packet_out[1].value[31:8] = (mshr_table[n].mem_size[2]) ? 24'b0 : {(`XLEN-8){lsq_packet_out[1].value[7]}};
 		    end
 		    HALF: begin
 			lsq_packet_out[1].value = (mshr_table[n].bo[2]) ? mshr_table[n].value[63:32] : mshr_table[n].value[31:0];
 			lsq_packet_out[1].value >>= (mshr_table[n].bo[1])*16;
-			lsq_packet_out[1].value[31:16] = 16'b0;
+			lsq_packet_out[1].value[31:16] = (mshr_table[n].mem_size[2]) ? 16'b0 : {(`XLEN-16){lsq_packet_out[1].value[15]}};
 		    end
 		    default:lsq_packet_out[1].value = (mshr_table[n].bo[2]) ? mshr_table[n].value[63:32] : mshr_table[n].value[31:0];
 	        endcase
@@ -313,7 +313,7 @@ module DCACHE(
     always_comb begin
         proc2Dmem_command = BUS_NONE;
         proc2Dmem_addr = 0;
-        proc2Dmem_data = 32'h0;
+        proc2Dmem_data = 64'hdeadfacedeadface;
 	icache_busy = 0;
         if (mem_req) begin
 	$display("sent");
@@ -340,9 +340,9 @@ assign lsq_packet_out[0].busy = (lsq_packet_in.valid && ~lsq_packet_in.st_or_ld 
    (mshr_state_table[3] == WAITING && ~mshr_table[3].st_or_ld) || n_evict_valid || (mshr_state_table[0] != INVALID && mshr_state_table[1] != INVALID && mshr_state_table[2] != INVALID &&  
    mshr_state_table[3] != INVALID);
     assign rt_busy = (mshr_state_table[0] != INVALID && mshr_state_table[1] != INVALID && mshr_state_table[2] != INVALID && mshr_state_table[3] != INVALID) || 
-					((lsq_packet_in.valid && miss && ~lsq_packet_in.st_or_ld) || ((mshr_state_table[0] == WAITING)&& ~mshr_table[0].st_or_ld) || 
-					((mshr_state_table[1] == WAITING) && ~mshr_table[1].st_or_ld) ||
-					((mshr_state_table[2] == WAITING) && ~mshr_table[2].st_or_ld) || ((mshr_state_table[3] == WAITING) && ~mshr_table[3].st_or_ld));
+					((lsq_packet_in.valid && ~lsq_packet_in.st_or_ld) || ((mshr_state_table[0] == WAITING)&& ~mshr_table[0].st_or_ld) 						|| ((mshr_state_table[1] == WAITING) && ~mshr_table[1].st_or_ld) ||
+					((mshr_state_table[2] == WAITING) && ~mshr_table[2].st_or_ld) || ((mshr_state_table[3] == WAITING) && 
+					~mshr_table[3].st_or_ld));
 
     always_ff @(posedge clock) begin
 	if(reset) begin

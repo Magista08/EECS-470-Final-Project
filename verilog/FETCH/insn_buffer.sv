@@ -61,28 +61,24 @@ end
 
 // Write the buffer
 always_comb begin
-	if(reset || squash_flag) begin
-		n_slot = 0;
-	end else begin 
-		case(if_packet_size)
-
-			2'b01: begin
-				n_slot[wptr[PTR_DEPTH-2:0]]   = if_packet_in[0];
-			end
-			2'b10: begin
-				n_slot[wptr[PTR_DEPTH-2:0]]   = if_packet_in[0];
-				n_slot[wptr1[PTR_DEPTH-2:0]]  = if_packet_in[1];
-			end
-			2'b11: begin
-				n_slot[wptr[PTR_DEPTH-2:0]]   = if_packet_in[0];
-				n_slot[wptr1[PTR_DEPTH-2:0]]  = if_packet_in[1];
-				n_slot[wptr2[PTR_DEPTH-2:0]]  = if_packet_in[2];
-			end
-			default: begin
-				n_slot = slot;
-			end
-		endcase
-	end
+	n_slot = slot;
+	case(if_packet_size)
+		2'b01: begin
+			n_slot[wptr[PTR_DEPTH-2:0]]   = if_packet_in[0];
+		end
+		2'b10: begin
+			n_slot[wptr[PTR_DEPTH-2:0]]   = if_packet_in[0];
+			n_slot[wptr1[PTR_DEPTH-2:0]]  = if_packet_in[1];
+		end
+		2'b11: begin
+			n_slot[wptr[PTR_DEPTH-2:0]]   = if_packet_in[0];
+			n_slot[wptr1[PTR_DEPTH-2:0]]  = if_packet_in[1];
+			n_slot[wptr2[PTR_DEPTH-2:0]]  = if_packet_in[2];
+		end
+		default: begin
+			n_slot = slot;
+		end
+	endcase
 end
 
 
@@ -100,7 +96,7 @@ end
 
 
 always_comb begin
-	if(reset || dp_packet_count == 2'b00 || SQ_full) begin
+	if(reset || dp_packet_count == 2'b00) begin
 		ib_dp_packet_out[0].inst  =  `NOP;
 		ib_dp_packet_out[0].PC    =  0;
 		ib_dp_packet_out[0].NPC   =  0;

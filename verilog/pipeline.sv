@@ -203,6 +203,7 @@ module pipeline (
     icache_2way icache0(
         .clock(clock),
         .reset(reset),
+	.squash_flag(squash_flag),
         //From mem
         .Imem2proc_response(mem2proc_response),
         .Imem2proc_data(mem2proc_data),

@@ -263,9 +263,15 @@ module mult_stage (
     assign shifted_mcand = {mcand[63-SHIFT:0], SHIFT'('b0)};
 
     always_ff @(posedge clock) begin
+	if(reset) begin
+	    product_sum <= 0;
+            next_mplier <= 0;
+            next_mcand  <= 0;
+	end else begin
         product_sum <= prev_sum + partial_product;
         next_mplier <= shifted_mplier;
         next_mcand  <= shifted_mcand;
+	end
     end
 
     always_ff @(posedge clock) begin

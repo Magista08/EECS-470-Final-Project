@@ -91,7 +91,8 @@ module LSQ (
         next_SQ_DC_packet = 0;
         to_DC_full = 0;
         psel_table = 0;
-	next_SQ_full = 0;
+        next_SQ_full = 0;
+        SQ_tail = 0;
 
         if (clear) begin
             next_SQ = 0;
@@ -101,7 +102,8 @@ module LSQ (
             next_SQ_DC_packet = 0;
             to_DC_full = 0;
             psel_table = 0;
-	    next_SQ_full = 0;
+            next_SQ_full = 0;
+            SQ_tail = 0;
 
         end else begin // Order of the following steps may change
 
@@ -336,7 +338,7 @@ module LSQ (
 
                         for (int j=0; j<`SQ_SIZE; j=j+1) begin
                             if (j!=i) begin
-                                psel_table.psel_1[j] = (next_SQ[j].load_1_store_0==0) && (next_SQ[j].valid==1) && (next_SQ[j].mem_size[1:0]==next_SQ[i].mem_size[1:0]) && (next_SQ[j].word_addr==next_SQ[i].word_addr) && (next_SQ[j].res_addr==next_SQ[i].res_addr);
+                                psel_table.psel_1[j] = (next_SQ[j].load_1_store_0==0) && (next_SQ[j].valid==1) && (next_SQ[j].mem_size[1:0]==next_SQ[i].mem_size[1:0]) && (next_SQ[i].mem_size[2]==1) && (next_SQ[j].word_addr==next_SQ[i].word_addr) && (next_SQ[j].res_addr==next_SQ[i].res_addr);
                             end
                         end
                         if(next_head_flag==next_tail_flag) begin // h and t in the same circle
@@ -498,7 +500,8 @@ module LSQ (
                                 next_SQ_DC_packet.address = {next_SQ[i].word_addr, next_SQ[i].res_addr};
                                 next_SQ_DC_packet.value = 0; // should be useless
                                 next_SQ_DC_packet.st_or_ld = 1;
-                                next_SQ_DC_packet.mem_size = next_SQ[i].mem_size[1:0];
+                                // next_SQ_DC_packet.mem_size = next_SQ[i].mem_size[1:0];
+                                next_SQ_DC_packet.mem_size = next_SQ[i].mem_size;
                                 next_SQ_DC_packet.T = next_SQ[i].T;
 
                                
@@ -579,7 +582,8 @@ module LSQ (
                 next_SQ_DC_packet.address = {next_SQ[next_head_idx].word_addr, next_SQ[next_head_idx].res_addr};
                 next_SQ_DC_packet.value = next_SQ[next_head_idx].value;
                 next_SQ_DC_packet.st_or_ld = 0;
-                next_SQ_DC_packet.mem_size = next_SQ[next_head_idx].mem_size[1:0];
+                // next_SQ_DC_packet.mem_size = next_SQ[next_head_idx].mem_size[1:0];
+                next_SQ_DC_packet.mem_size = next_SQ[next_head_idx].mem_size;
                 next_SQ_DC_packet.T = next_SQ[next_head_idx].T;
 
                 
@@ -646,7 +650,8 @@ module LSQ (
             $display("next_SQ[%0d].load_1_store_0: %b", i, next_SQ[i].load_1_store_0);
             $display("next_SQ[%0d].mem_size: %b", i, next_SQ[i].mem_size);
             $display("next_SQ[%0d].NPC: %h", i, next_SQ[i].NPC);
-
+            $display("next_SQ[%0d].retire_valid: %b", i, next_SQ[i].retire_valid);
+            $display("next_SQ[%0d].sent_to_CompBuff: %b", i, next_SQ[i].sent_to_CompBuff);
         end
 
         if (reset || clear) begin
@@ -685,3 +690,4 @@ endmodule
 //         assign pre_req[i] = req[i] | pre_req[i+1];
 //     end
 // endmodule 
+

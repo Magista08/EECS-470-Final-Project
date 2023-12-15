@@ -460,10 +460,10 @@ module complete_buffer (
     always_ff @(posedge clock) begin
         $display("buffer_halt: %b", buffer_halt);
     end
-	logic [`XLEN-1:0] ld_out_num;
-    logic [`XLEN-1:0] st_out_num;
-    logic [`XLEN-1:0] n_ld_out_num;
-    logic [`XLEN-1:0] n_st_out_num;
+	// logic [`XLEN-1:0] ld_out_num;
+    // logic [`XLEN-1:0] st_out_num;
+    // logic [`XLEN-1:0] n_ld_out_num;
+    // logic [`XLEN-1:0] n_st_out_num;
 
     // assign function unit outputs to the buffer
     always_comb begin
@@ -477,6 +477,8 @@ module complete_buffer (
 
         ALU_buffer_busy = 0;
         MULT_buffer_busy = 0;
+        MEM_buffer_busy = 0;
+        LSQ_buffer_busy = 0;
 
         if (clear) begin
             next_buffer = 0;
@@ -487,54 +489,111 @@ module complete_buffer (
             next_CDB_valid = 0;
             next_CDB_branch_taken = 0;
 
+            ALU_buffer_busy = 0;
+            MULT_buffer_busy = 0;
+            MEM_buffer_busy = 0;
+            LSQ_buffer_busy = 0;
+
         end else begin
+        //     for (int i=0; i<`NUM_FU_MULT; i=i+1) begin
+        //         if (MULT_result_ready[i] && ~next_buffer[i].valid) begin
+        //             next_buffer[i].halt = MULT_halt[i];
+        //             next_buffer[i].NPC = MULT_NPC[i];
+        //             next_buffer[i].T = MULT_tag[i];
+        //             next_buffer[i].value = MULT_result[i];
+        //             next_buffer[i].valid = 1;
+        //             next_buffer[i].branch_taken = 0;
+		// 	        $display("--------MULT------------");
+        //         end
+        //     end
+        //     for (int j=0; j<`NUM_FU_ALU; j=j+1) begin
+        //         if (ALU_result_ready[j] && ~next_buffer[j+`NUM_FU_MULT].valid) begin
+        //             next_buffer[j+`NUM_FU_MULT].halt = ALU_halt[j];
+        //             next_buffer[j+`NUM_FU_MULT].NPC = ALU_NPC[j];
+        //             next_buffer[j+`NUM_FU_MULT].T = ALU_tag[j];
+        //             next_buffer[j+`NUM_FU_MULT].value = ALU_result[j];
+        //             next_buffer[j+`NUM_FU_MULT].valid = 1;
+        //             next_buffer[j+`NUM_FU_MULT].branch_taken = ALU_branch_taken[j];
+		// 	        $display("--------ALU------------");
+        //         end
+        //     end
+		// n_ld_out_num = ld_out_num;
+		// n_st_out_num = st_out_num;
+        //     // LSQ stuff (3 ST for retire and 1 for LD)
+        //     for (int k=0; k<`NUM_FU_MEM; k=k+1) begin
+        //         if (ST_result_ready[k] && ~next_buffer[k+`NUM_FU_MULT+`NUM_FU_ALU].valid) begin
+        //             next_buffer[k+`NUM_FU_MULT+`NUM_FU_ALU].halt = ST_halt[k];
+        //             next_buffer[k+`NUM_FU_MULT+`NUM_FU_ALU].NPC = ST_NPC[k];
+        //             next_buffer[k+`NUM_FU_MULT+`NUM_FU_ALU].T = ST_tag[k];
+        //             next_buffer[k+`NUM_FU_MULT+`NUM_FU_ALU].value = ST_result[k];
+        //             next_buffer[k+`NUM_FU_MULT+`NUM_FU_ALU].valid = 1;
+        //             next_buffer[k+`NUM_FU_MULT+`NUM_FU_ALU].branch_taken = 0;
+		// n_st_out_num = n_st_out_num + 1;
+        //             //$display("--------STfromFU------------");
+        //         end
+        //     end
+        //     if (SQ_COMP_packet.valid && ~next_buffer[`NUM_FU_MULT+`NUM_FU_ALU+`NUM_FU_MEM].valid) begin
+        //         next_buffer[`NUM_FU_MULT+`NUM_FU_ALU+`NUM_FU_MEM].halt = SQ_COMP_packet.halt;
+        //         next_buffer[`NUM_FU_MULT+`NUM_FU_ALU+`NUM_FU_MEM].NPC = SQ_COMP_packet.NPC;
+        //         next_buffer[`NUM_FU_MULT+`NUM_FU_ALU+`NUM_FU_MEM].T = SQ_COMP_packet.T;
+        //         next_buffer[`NUM_FU_MULT+`NUM_FU_ALU+`NUM_FU_MEM].value = SQ_COMP_packet.value;
+        //         next_buffer[`NUM_FU_MULT+`NUM_FU_ALU+`NUM_FU_MEM].valid = 1;
+        //         next_buffer[`NUM_FU_MULT+`NUM_FU_ALU+`NUM_FU_MEM].branch_taken = 0;
+		// n_ld_out_num = n_ld_out_num + 1;
+		//         //$display("--------LDfromLSQ------------");
+        //     end
+
+            if (SQ_COMP_packet.valid && ~next_buffer[0].valid) begin
+                next_buffer[0].halt = SQ_COMP_packet.halt;
+                next_buffer[0].NPC = SQ_COMP_packet.NPC;
+                next_buffer[0].T = SQ_COMP_packet.T;
+                next_buffer[0].value = SQ_COMP_packet.value;
+                next_buffer[0].valid = 1;
+                next_buffer[0].branch_taken = 0;
+		        // n_ld_out_num = n_ld_out_num + 1;
+		        // $display("--------LDfromLSQ------------");
+            end
+
             for (int i=0; i<`NUM_FU_MULT; i=i+1) begin
-                if (MULT_result_ready[i] && ~next_buffer[i].valid) begin
-                    next_buffer[i].halt = MULT_halt[i];
-                    next_buffer[i].NPC = MULT_NPC[i];
-                    next_buffer[i].T = MULT_tag[i];
-                    next_buffer[i].value = MULT_result[i];
-                    next_buffer[i].valid = 1;
-                    next_buffer[i].branch_taken = 0;
-			        $display("--------MULT------------");
+                if (MULT_result_ready[i] && ~next_buffer[i+1].valid) begin
+                    next_buffer[i+1].halt = MULT_halt[i];
+                    next_buffer[i+1].NPC = MULT_NPC[i];
+                    next_buffer[i+1].T = MULT_tag[i];
+                    next_buffer[i+1].value = MULT_result[i];
+                    next_buffer[i+1].valid = 1;
+                    next_buffer[i+1].branch_taken = 0;
+			        // $display("--------MULT------------");
                 end
             end
             for (int j=0; j<`NUM_FU_ALU; j=j+1) begin
-                if (ALU_result_ready[j] && ~next_buffer[j+`NUM_FU_MULT].valid) begin
-                    next_buffer[j+`NUM_FU_MULT].halt = ALU_halt[j];
-                    next_buffer[j+`NUM_FU_MULT].NPC = ALU_NPC[j];
-                    next_buffer[j+`NUM_FU_MULT].T = ALU_tag[j];
-                    next_buffer[j+`NUM_FU_MULT].value = ALU_result[j];
-                    next_buffer[j+`NUM_FU_MULT].valid = 1;
-                    next_buffer[j+`NUM_FU_MULT].branch_taken = ALU_branch_taken[j];
-			        $display("--------ALU------------");
+                if (ALU_result_ready[j] && ~next_buffer[j+1+`NUM_FU_MULT].valid) begin
+                    next_buffer[j+1+`NUM_FU_MULT].halt = ALU_halt[j];
+                    next_buffer[j+1+`NUM_FU_MULT].NPC = ALU_NPC[j];
+                    next_buffer[j+1+`NUM_FU_MULT].T = ALU_tag[j];
+                    next_buffer[j+1+`NUM_FU_MULT].value = ALU_result[j];
+                    next_buffer[j+1+`NUM_FU_MULT].valid = 1;
+                    next_buffer[j+1+`NUM_FU_MULT].branch_taken = ALU_branch_taken[j];
+			        // $display("--------ALU------------");
                 end
             end
-		n_ld_out_num = ld_out_num;
-		n_st_out_num = st_out_num;
+		    // n_ld_out_num = ld_out_num;
+		    // n_st_out_num = st_out_num;
             // LSQ stuff (3 ST for retire and 1 for LD)
             for (int k=0; k<`NUM_FU_MEM; k=k+1) begin
-                if (ST_result_ready[k] && ~next_buffer[k+`NUM_FU_MULT+`NUM_FU_ALU].valid) begin
-                    next_buffer[k+`NUM_FU_MULT+`NUM_FU_ALU].halt = ST_halt[k];
-                    next_buffer[k+`NUM_FU_MULT+`NUM_FU_ALU].NPC = ST_NPC[k];
-                    next_buffer[k+`NUM_FU_MULT+`NUM_FU_ALU].T = ST_tag[k];
-                    next_buffer[k+`NUM_FU_MULT+`NUM_FU_ALU].value = ST_result[k];
-                    next_buffer[k+`NUM_FU_MULT+`NUM_FU_ALU].valid = 1;
-                    next_buffer[k+`NUM_FU_MULT+`NUM_FU_ALU].branch_taken = 0;
-		n_st_out_num = n_st_out_num + 1;
-                    //$display("--------STfromFU------------");
+                if (ST_result_ready[k] && ~next_buffer[k+1+`NUM_FU_MULT+`NUM_FU_ALU].valid) begin
+                    next_buffer[k+1+`NUM_FU_MULT+`NUM_FU_ALU].halt = ST_halt[k];
+                    next_buffer[k+1+`NUM_FU_MULT+`NUM_FU_ALU].NPC = ST_NPC[k];
+                    next_buffer[k+1+`NUM_FU_MULT+`NUM_FU_ALU].T = ST_tag[k];
+                    next_buffer[k+1+`NUM_FU_MULT+`NUM_FU_ALU].value = ST_result[k];
+                    next_buffer[k+1+`NUM_FU_MULT+`NUM_FU_ALU].valid = 1;
+                    next_buffer[k+1+`NUM_FU_MULT+`NUM_FU_ALU].branch_taken = 0;
+		            // n_st_out_num = n_st_out_num + 1;
+                    // $display("--------STfromFU------------");
                 end
             end
-            if (SQ_COMP_packet.valid && ~next_buffer[`NUM_FU_MULT+`NUM_FU_ALU+`NUM_FU_MEM].valid) begin
-                next_buffer[`NUM_FU_MULT+`NUM_FU_ALU+`NUM_FU_MEM].halt = SQ_COMP_packet.halt;
-                next_buffer[`NUM_FU_MULT+`NUM_FU_ALU+`NUM_FU_MEM].NPC = SQ_COMP_packet.NPC;
-                next_buffer[`NUM_FU_MULT+`NUM_FU_ALU+`NUM_FU_MEM].T = SQ_COMP_packet.T;
-                next_buffer[`NUM_FU_MULT+`NUM_FU_ALU+`NUM_FU_MEM].value = SQ_COMP_packet.value;
-                next_buffer[`NUM_FU_MULT+`NUM_FU_ALU+`NUM_FU_MEM].valid = 1;
-                next_buffer[`NUM_FU_MULT+`NUM_FU_ALU+`NUM_FU_MEM].branch_taken = 0;
-		n_ld_out_num = n_ld_out_num + 1;
-		        //$display("--------LDfromLSQ------------");
-            end
+
+
+
 
             // give information to next CDB and set buffer not valid
             for (int i=0; i<3; i=i+1) begin
@@ -554,17 +613,32 @@ module complete_buffer (
                 end
             end 
 
-            // give busy information
+            // // give busy information
+            // for (int i=0; i<`NUM_FU_MULT; i=i+1) begin
+            //     MULT_buffer_busy[i] = next_buffer[i].valid;// next or current
+            // end
+            // for (int j=0; j<`NUM_FU_ALU; j=j+1) begin
+            //     ALU_buffer_busy[j] = next_buffer[j+`NUM_FU_MULT].valid;
+            // end
+            // for (int k=0; k<`NUM_FU_MEM; k=k+1) begin
+            //     MEM_buffer_busy[k] = next_buffer[k+`NUM_FU_MULT+`NUM_FU_ALU].valid;
+            // end
+            // LSQ_buffer_busy = next_buffer[`NUM_FU_MULT+`NUM_FU_ALU+`NUM_FU_MEM].valid; // only one LSQ output here
+
+
+            LSQ_buffer_busy = next_buffer[0].valid; // only one LSQ output here (LD)
+            
             for (int i=0; i<`NUM_FU_MULT; i=i+1) begin
-                MULT_buffer_busy[i] = next_buffer[i].valid;// next or current
+                MULT_buffer_busy[i] = next_buffer[i+1].valid;
             end
             for (int j=0; j<`NUM_FU_ALU; j=j+1) begin
-                ALU_buffer_busy[j] = next_buffer[j+`NUM_FU_MULT].valid;
+                ALU_buffer_busy[j] = next_buffer[j+1+`NUM_FU_MULT].valid;
             end
             for (int k=0; k<`NUM_FU_MEM; k=k+1) begin
-                MEM_buffer_busy[k] = next_buffer[k+`NUM_FU_MULT+`NUM_FU_ALU].valid;
+                MEM_buffer_busy[k] = next_buffer[k+1+`NUM_FU_MULT+`NUM_FU_ALU].valid;
             end
-            LSQ_buffer_busy = next_buffer[`NUM_FU_MULT+`NUM_FU_ALU+`NUM_FU_MEM].valid; // only one LSQ output here
+
+
         end
     end
 
@@ -580,8 +654,8 @@ module complete_buffer (
             CDB_value <= 0;
             CDB_valid <= 0;
             CDB_branch_taken <= 0;
-	    ld_out_num <= 0;
-	    st_out_num <= 0;
+	    // ld_out_num <= 0;
+	    // st_out_num <= 0;
         end
         else begin
             buffer <= next_buffer;
@@ -592,10 +666,11 @@ module complete_buffer (
             CDB_valid <= next_CDB_valid;
 	        // $display("------next_CDB_valid:%b---------", next_CDB_valid);
             CDB_branch_taken <= next_CDB_branch_taken;
-	    ld_out_num <= n_ld_out_num;
-	    st_out_num <= n_st_out_num;
+	    // ld_out_num <= n_ld_out_num;
+	    // st_out_num <= n_st_out_num;
         end
-	$display("ld_out_num:%h st_out_num:%h", ld_out_num, st_out_num);
+	// $display("ld_out_num:%h st_out_num:%h", ld_out_num, st_out_num);
     end 
 
 endmodule
+

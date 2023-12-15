@@ -695,7 +695,7 @@ typedef struct packed {
     logic [`XLEN-1:0] address;
     logic [`XLEN-1:0] value;//ST
     logic st_or_ld;//ST=0, LD=1
-    MEM_SIZE          mem_size;
+    logic [2:0]          mem_size;
     logic [$clog2(`ROBLEN)-1:0]    T;
 } LSQ_DCACHE_PACKET;
 
@@ -728,7 +728,7 @@ typedef struct packed {
     logic [24:0] tag;
     logic st_or_ld;//ST=0, LD=1
     logic [63:0] value;
-    MEM_SIZE          mem_size;  
+    logic [2:0]          mem_size;  
     //logic [3:0] response;
     logic ptr;
     logic [$clog2(`ROBLEN)-1:0] T;

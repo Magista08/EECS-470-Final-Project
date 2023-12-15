@@ -48,6 +48,7 @@ module ROB (
 		rob_table_n[i].take_branch =  rob_table[i].take_branch;
 		rob_table_n[i].NPC = rob_table[i].NPC;
 		rob_table_n[i].halt = rob_table[i].halt;
+		rob_table_n[i].rd_wr_mem = rob_table[i].rd_wr_mem;
 	    end
 	end
 

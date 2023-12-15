@@ -15,7 +15,7 @@ module BP(
     // Input Prepare
     logic [`N-1:0]              if_valid;
     logic [`N-1:0] [`XLEN-1:0]  if_pc;
-
+ 
     logic [`N-1:0]              cond_branch_en;
     logic [`N-1:0]              branch_en;
     logic [`N-1:0]              branch_taken;
@@ -38,6 +38,8 @@ module BP(
     // RAS
     logic push, pop;
     logic [`XLEN-1:0] return_address;
+    logic JAL_happen;
+    logic [4:0]       JAL_RD;
 
     // output
     // logic [`N-1:0] [`XLEN-1:0] bp_pc, bp_npc_out;
@@ -147,7 +149,7 @@ module BP(
 
     // Relative PC
     logic [`XLEN-1:0] link_pc;
-    assign link_pc = jump[0] ?  ex_tpc[0] : jump[1] ? ex_tpc[1] : ex_tpc[2];
+    assign link_pc = jump[0] ?  if_pc[0] : jump[1] ? if_pc[1] : if_pc[2];
     
     RAS ras0(
         // Inputs
@@ -166,18 +168,29 @@ module BP(
  
                        
     always_comb begin
+        JAL_happen = 1'b0;
+        JAL_RD     = 5'b0;
         bp_taken_out = {`N{1'b0}};
         bp_npc_out = bp_last_valid_npc;
 
         for (int i=0; i<`N; i++) begin
             if (link[i]) begin
                 bp_packet_out[i].PC  = if_pc[i];
-                bp_packet_out[i].NPC = return_address;
+                bp_packet_out[i].NPC = if_packet_in[i].NPC;
                 bp_taken_out[i] = 1'b1;
+                if(JAL_happen && (if_packet_in[i].inst.i.rs1 == JAL_RD)) begin
+                    bp_packet_out[i].NPC = if_packet_in[i].NPC;
+                    JAL_happen = 1'b0;
+                end else if (JAL_happen && (if_packet_in[i].inst.i.rs1 != JAL_RD)) begin
+                    bp_packet_out[i].NPC = return_address;
+                    JAL_happen = 1'b0;
+                end 
             end else if (jump[i] && hit[i]) begin
                 bp_packet_out[i].PC  = if_pc[i];
                 bp_packet_out[i].NPC = predict_pc[i];
                 bp_taken_out[i] = 1'b1;
+                JAL_happen = 1'b1;
+                JAL_RD     = if_packet_in[i].inst.j.rd;
             end else if (cond_branch_de[i] && bp_taken[i] && hit[i]) begin
                 bp_packet_out[i].PC  = if_pc[i];
                 bp_packet_out[i].NPC = predict_pc[i];
@@ -194,7 +207,7 @@ module BP(
 
             if (i == 0 && bp_taken_out[i]) begin
                 bp_npc_out = bp_packet_out[i].NPC;
-            end else if(bp_taken_out[i] && !bp_taken_out[i-1]) begin
+            end else if(i!= 0 && bp_taken_out[i] && !bp_taken_out[i-1]) begin
                 bp_npc_out = bp_packet_out[i].NPC;
             end else if(if_packet_in[i].valid) begin
                 if (i == 0) begin
@@ -240,3 +253,4 @@ module BP(
         end
     end
 endmodule
+

@@ -28,9 +28,11 @@ module BHT(
     endgenerate
 
     always_comb begin
+	rptr = 0;
+	wptr = 0;
         for (int i=0; i<`N; i=i+1) begin
-            rptr[i] = ex_pc_in[i][2 +: $clog2(`BHTLEN)];
-            wptr[i] = if_pc_in[i][2 +: $clog2(`BHTLEN)];
+            rptr[i] = if_pc_in[i][2 +: $clog2(`BHTLEN)];
+            wptr[i] = ex_pc_in[i][2 +: $clog2(`BHTLEN)];
         end
     end
     

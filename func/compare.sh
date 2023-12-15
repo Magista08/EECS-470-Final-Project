@@ -26,24 +26,24 @@ mkdir -p correct_output
 
 # Find if the correct output file exists
 if [ ! -f ../correct_output/$TEST_NAME.$FILE_TYPE ]; then
-    cd ../p3-f23.yhaotian
+    cd ../project3
 
     # Check if the test file in project03
     TEST_EXTSTED=`ls -l programs/ | grep $TEST_NAME | wc -l`
     if [ $TEST_EXTSTED -eq 0 ]; then
-        cp ../p4-f32.group11/programs/$TEST_NAME.s programs/$TEST_NAME.s
+        cp ../p4_1_copy/programs/$TEST_NAME.s programs/$TEST_NAME.s
     fi
 
     # Get the correct output
     make $TEST_NAME.out
 
     # Move the correct output to final_project
-    mv output/$TEST_NAME.out  ../p4-f23.group11/correct_output/$TEST_NAME.out
-    mv output/$TEST_NAME.wb   ../p4-f23.group11/correct_output/$TEST_NAME.wb
-    mv output/$TEST_NAME.ppln ../p4-f23.group11/correct_output/$TEST_NAME.ppln
+    mv output/$TEST_NAME.out  ../p4_1_copy/correct_output/$TEST_NAME.out
+    mv output/$TEST_NAME.wb   ../p4_1_copy/correct_output/$TEST_NAME.wb
+    mv output/$TEST_NAME.ppln ../p4_1_copy/correct_output/$TEST_NAME.ppln
 
     # Go Back
-    cd ../p4-f23.group11/
+    cd ../p4_1_copy/
 fi
 
 # Get the correct output
