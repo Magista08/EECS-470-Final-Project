@@ -5,6 +5,7 @@ module icache_2way (
     input clock,
     input reset,
     input squash_flag,
+	input [`XLEN-1:0] squash_pc,
     // From memory
     input [3:0]  Imem2proc_response, // Should be zero unless there is a response
     input [63:0] Imem2proc_data,
@@ -80,7 +81,7 @@ module icache_2way (
             if (update_mem_tag) begin
                 current_mem_tag <= Imem2proc_response;
             end
-			if (squash_flag) begin
+			if (squash_flag && squash_pc != proc2Icache_addr) begin
 				current_mem_tag <= 0;
 			end
             if (got_mem_data) begin // If data came from memory, meaning tag matches

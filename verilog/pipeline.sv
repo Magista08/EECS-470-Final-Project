@@ -204,6 +204,7 @@ module pipeline (
         .clock(clock),
         .reset(reset),
 	.squash_flag(squash_flag),
+	.squash_pc(squash_pc),
         //From mem
         .Imem2proc_response(mem2proc_response),
         .Imem2proc_data(mem2proc_data),

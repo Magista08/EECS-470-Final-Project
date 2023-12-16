@@ -597,7 +597,15 @@ module LSQ (
                 next_SQ[next_head_idx] = 0;
                 next_head = head + 1;
             end
-                to_DC_full = 0;
+            to_DC_full = 0;
+
+            // [9.]
+            for (int i=0; i<3; i=i+1) begin
+                if ((next_SQ[next_head[$clog2(`SQ_SIZE)-1:0]].valid==1) && (RT_packet[i].retire_tag==next_SQ[next_head[$clog2(`SQ_SIZE)-1:0]].T) && (RT_packet[i].valid==1)) begin//RT_packet[i].valid==1
+                    next_SQ[next_head[$clog2(`SQ_SIZE)-1:0]].retire_valid = 1;
+                    break;
+                end
+            end
         end  
     end
 
@@ -660,7 +668,7 @@ module LSQ (
             tail <= 0;
             SQ_COMP_packet <= 0;
             SQ_DC_packet <= 0;
-	    SQ_full <= 0;
+	        SQ_full <= 0;
 
         end else begin
             SQ <= next_SQ;
@@ -668,7 +676,7 @@ module LSQ (
             tail <= next_tail;
             SQ_COMP_packet <= next_SQ_COMP_packet;
             SQ_DC_packet <= next_SQ_DC_packet;
-	    SQ_full <= next_SQ_full;
+	        SQ_full <= next_SQ_full;
         end
     end
 
@@ -690,4 +698,5 @@ endmodule
 //         assign pre_req[i] = req[i] | pre_req[i+1];
 //     end
 // endmodule 
+
 
