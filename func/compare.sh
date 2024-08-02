@@ -28,17 +28,17 @@ mkdir -p correct_output
 
 # Find if the correct output file exists
 if [ ! -f ../correct_output/$TEST_NAME.$FILE_TYPE ]; then
-    cd ../../p3
+    cd ../project03/
 
     # Check if the test file in project03
     TEST_EXTSTED=`ls -l programs/ | grep $TEST_NAME | wc -l`
-    S_EXISTED=`ls -l ../git_final/p4/programs/ | grep $TEST_NAME.s | wc -l`
-    C_EXISTED=`ls -l ../git_final/p4/programs/ | grep $TEST_NAME.c | wc -l`
+    S_EXISTED=`ls -l ../summer_final_project/programs/ | grep $TEST_NAME.s | wc -l`
+    C_EXISTED=`ls -l ../summer_final_project/programs/ | grep $TEST_NAME.c | wc -l`
     if [ $TEST_EXTSTED -eq 0 ]; then
         if [ $S_EXISTED -ne 0 ]; then
-            cp ../git_final/p4/$TEST_NAME.s programs/$TEST_NAME.s
+            cp ../summer_final_project/programs/$TEST_NAME.s programs/$TEST_NAME.s
         else
-            cp ../git_final/p4/programs/$TEST_NAME.c programs/$TEST_NAME.c
+            cp ../summer_final_project/programs/$TEST_NAME.c programs/$TEST_NAME.c
         fi
     fi
 
@@ -46,12 +46,12 @@ if [ ! -f ../correct_output/$TEST_NAME.$FILE_TYPE ]; then
     make $TEST_NAME.out
 
     # Move the correct output to final_project
-    mv output/$TEST_NAME.out  ../git_final/p4/correct_output/$TEST_NAME.out
-    mv output/$TEST_NAME.wb   ../git_final/p4/correct_output/$TEST_NAME.wb
-    mv output/$TEST_NAME.ppln ../git_final/p4/correct_output/$TEST_NAME.ppln
+    mv output/$TEST_NAME.out  ../summer_final_project/correct_output/$TEST_NAME.out
+    mv output/$TEST_NAME.wb   ../summer_final_project/correct_output/$TEST_NAME.wb
+    mv output/$TEST_NAME.ppln ../summer_final_project/correct_output/$TEST_NAME.ppln
 
     # Go Back
-    cd ../git_final/p4/
+    cd ../summer_final_project/
 fi
 
 # Get the correct output
